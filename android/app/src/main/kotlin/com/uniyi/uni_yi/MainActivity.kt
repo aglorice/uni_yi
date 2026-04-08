@@ -1,13 +1,17 @@
 package com.uniyi.uni_yi
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.ContentValues
 import android.content.Intent
+import android.net.Uri
 import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.provider.Settings
 import android.webkit.MimeTypeMap
+import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -27,6 +31,64 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        configureDownloadsChannel(flutterEngine)
+        configureInstallerChannel(flutterEngine)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != SAVE_WITH_PICKER_REQUEST_CODE) {
+            return
+        }
+
+        val result = pendingPickerResult
+        val bytes = pendingPickerBytes
+        val fileName = pendingPickerFileName
+        clearPendingPickerState()
+
+        if (result == null) {
+            return
+        }
+
+        if (resultCode != Activity.RESULT_OK) {
+            result.error("cancelled", "User cancelled save", null)
+            return
+        }
+
+        val uri = data?.data
+        if (uri == null || bytes == null || fileName.isNullOrBlank()) {
+            result.error("invalid_state", "Missing picker result data", null)
+            return
+        }
+
+        try {
+            val grantFlags =
+                data.flags and
+                    (Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            if (grantFlags != 0) {
+                contentResolver.takePersistableUriPermission(uri, grantFlags)
+            }
+
+            applicationContext.contentResolver.openOutputStream(uri)?.use { stream ->
+                stream.write(bytes)
+                stream.flush()
+            } ?: throw IOException("Unable to open output stream.")
+
+            result.success(
+                mapOf(
+                    "fileName" to fileName,
+                    "locationLabel" to "所选位置/$fileName",
+                    "uri" to uri.toString(),
+                ),
+            )
+        } catch (error: Exception) {
+            result.error("save_failed", error.message, null)
+        }
+    }
+
+    private fun configureDownloadsChannel(flutterEngine: FlutterEngine) {
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             "uni_yi/downloads",
@@ -80,56 +142,31 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != SAVE_WITH_PICKER_REQUEST_CODE) {
-            return
-        }
+    private fun configureInstallerChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "uni_yi/app_installer",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "installApk" -> {
+                    val fileName = call.argument<String>("fileName")
+                    val path = call.argument<String>("path")
+                    val uri = call.argument<String>("uri")
 
-        val result = pendingPickerResult
-        val bytes = pendingPickerBytes
-        val fileName = pendingPickerFileName
-        clearPendingPickerState()
+                    if (fileName.isNullOrBlank()) {
+                        result.error("invalid_args", "Missing fileName", null)
+                        return@setMethodCallHandler
+                    }
 
-        if (result == null) {
-            return
-        }
+                    try {
+                        result.success(installApk(fileName, path, uri))
+                    } catch (error: Exception) {
+                        result.error("install_failed", error.message, null)
+                    }
+                }
 
-        if (resultCode != Activity.RESULT_OK) {
-            result.error("cancelled", "User cancelled save", null)
-            return
-        }
-
-        val uri = data?.data
-        if (uri == null || bytes == null || fileName.isNullOrBlank()) {
-            result.error("invalid_state", "Missing picker result data", null)
-            return
-        }
-
-        try {
-            val grantFlags =
-                data.flags and
-                    (Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            if (grantFlags != 0) {
-                contentResolver.takePersistableUriPermission(uri, grantFlags)
+                else -> result.notImplemented()
             }
-
-            applicationContext.contentResolver.openOutputStream(uri)?.use { stream ->
-                stream.write(bytes)
-                stream.flush()
-            } ?: throw IOException("Unable to open output stream.")
-
-            result.success(
-                mapOf(
-                    "fileName" to fileName,
-                    "locationLabel" to "所选位置/$fileName",
-                    "uri" to uri.toString(),
-                ),
-            )
-        } catch (error: Exception) {
-            result.error("save_failed", error.message, null)
         }
     }
 
@@ -248,6 +285,72 @@ class MainActivity : FlutterActivity() {
             }
         @Suppress("DEPRECATION")
         startActivityForResult(intent, SAVE_WITH_PICKER_REQUEST_CODE)
+    }
+
+    private fun installApk(
+        fileName: String,
+        path: String?,
+        uriString: String?,
+    ): Map<String, String?> {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            !packageManager.canRequestPackageInstalls()
+        ) {
+            val intent =
+                Intent(
+                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:$packageName"),
+                ).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            startActivity(intent)
+            return mapOf(
+                "status" to "permission_required",
+                "message" to "请先允许安装未知来源应用，然后再点一次安装。",
+            )
+        }
+
+        val apkUri = resolveInstallUri(path, uriString)
+        val intent =
+            Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+        try {
+            startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
+            throw IOException("系统未找到可用的安装器。")
+        }
+
+        return mapOf(
+            "status" to "started",
+            "message" to "$fileName 已交给系统安装器处理。",
+        )
+    }
+
+    private fun resolveInstallUri(path: String?, uriString: String?): Uri {
+        if (!uriString.isNullOrBlank() && uriString.startsWith("content://")) {
+            return Uri.parse(uriString)
+        }
+
+        if (path.isNullOrBlank()) {
+            if (!uriString.isNullOrBlank()) {
+                return Uri.parse(uriString)
+            }
+            throw IOException("Missing install target path.")
+        }
+
+        val file = File(path)
+        if (!file.exists()) {
+            throw IOException("Install file does not exist.")
+        }
+
+        return FileProvider.getUriForFile(
+            applicationContext,
+            "${applicationContext.packageName}.fileprovider",
+            file,
+        )
     }
 
     private fun buildUniqueName(original: String, exists: (String) -> Boolean): String {

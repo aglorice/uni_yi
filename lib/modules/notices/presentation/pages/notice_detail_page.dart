@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../app/di/app_providers.dart';
 import '../../../../core/error/error_display.dart';
+import '../../../../core/platform/file_save_service.dart';
 import '../../../../core/result/result.dart';
 import '../../../../shared/widgets/async_value_view.dart';
 import '../../domain/entities/campus_notice.dart';
@@ -213,11 +215,11 @@ class _AttachmentTile extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     switch (result) {
-      case Success<SavedNoticeFile>(data: final file):
+      case Success<SavedFile>(data: final file):
         messenger.showSnackBar(
           SnackBar(content: Text('${file.fileName} 已保存到 ${file.path}')),
         );
-      case FailureResult<SavedNoticeFile>(failure: final failure):
+      case FailureResult<SavedFile>(failure: final failure):
         messenger.showSnackBar(
           SnackBar(content: Text(formatError(failure).message)),
         );
@@ -372,7 +374,7 @@ class _NoticeImagePreviewPage extends ConsumerWidget {
     ref.read(noticeImageSavingProvider(url).notifier).state = true;
 
     final result = await ref
-        .read(noticeFileSaverProvider)
+        .read(fileSaveServiceProvider)
         .saveBytesSafely(
           fileName: _buildImageFileName(url, bytes),
           bytes: bytes,
@@ -390,11 +392,11 @@ class _NoticeImagePreviewPage extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     switch (result) {
-      case Success<SavedNoticeFile>(data: final file):
+      case Success<SavedFile>(data: final file):
         messenger.showSnackBar(
           SnackBar(content: Text('${file.fileName} 已保存到 ${file.path}')),
         );
-      case FailureResult<SavedNoticeFile>(failure: final failure):
+      case FailureResult<SavedFile>(failure: final failure):
         messenger.showSnackBar(
           SnackBar(content: Text(formatError(failure).message)),
         );

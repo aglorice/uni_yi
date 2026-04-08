@@ -4,9 +4,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/logging/app_logger.dart';
 import '../../core/network/user_agent_pool.dart';
+import '../../core/platform/app_installer_service.dart';
 import '../../core/platform/downloads_service.dart';
+import '../../core/platform/file_save_service.dart';
 import '../../core/storage/json_cache_store.dart';
 import '../../core/storage/shared_preferences_json_store.dart';
+import '../../integrations/app_update/github_release_api.dart';
 import '../../integrations/campus_notices/wyu_notice_api.dart';
 import '../../integrations/electricity_recharge/wyu_electricity_api.dart';
 import '../../integrations/electricity_recharge/wyu_electricity_parser.dart';
@@ -53,6 +56,18 @@ final appLoggerProvider = Provider<AppLogger>((ref) => const AppLogger());
 
 final downloadsServiceProvider = Provider<DownloadsService>(
   (ref) => const DownloadsService(),
+);
+
+final appInstallerServiceProvider = Provider<AppInstallerService>(
+  (ref) => const AppInstallerService(),
+);
+
+final fileSaveServiceProvider = Provider<FileSaveService>(
+  (ref) => FileSaveService(ref.watch(downloadsServiceProvider)),
+);
+
+final gitHubReleaseApiProvider = Provider<GitHubReleaseApi>(
+  (ref) => GitHubReleaseApi(logger: ref.watch(appLoggerProvider)),
 );
 
 final jsonCacheStoreProvider = Provider<JsonCacheStore>(
