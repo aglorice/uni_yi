@@ -62,6 +62,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 14),
+                  Text(
+                    '使用五邑大学门户网站账号密码登录',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                   const SizedBox(height: 48),
                   TextField(
                     controller: _usernameController,
