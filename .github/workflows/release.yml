@@ -2,18 +2,72 @@ name: Build & Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+    paths:
+      - 'pubspec.yaml'
+  workflow_dispatch:
 
 env:
-  FLUTTER_VERSION: '3.29.0'
+  FLUTTER_VERSION: '3.35.6'
 
 jobs:
-  build-android:
-    name: Build Android APK
+  prepare:
+    name: Prepare Release
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      build_number: ${{ steps.version.outputs.build_number }}
+      tag: ${{ steps.version.outputs.tag }}
+      version_changed: ${{ steps.version.outputs.version_changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: version
+        env:
+          EVENT_BEFORE: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          RAW_VERSION=$(awk '/^version:/ {print $2; exit}' pubspec.yaml)
+          if [ -z "$RAW_VERSION" ]; then
+            echo "pubspec.yaml 中缺少 version 字段" >&2
+            exit 1
+          fi
+
+          VERSION="${RAW_VERSION%%+*}"
+          BUILD_NUMBER="${RAW_VERSION#*+}"
+          if [ "$BUILD_NUMBER" = "$RAW_VERSION" ] || [ -z "$BUILD_NUMBER" ]; then
+            BUILD_NUMBER=1
+          fi
+
+          PREV_RAW_VERSION=""
+          if [ "${EVENT_NAME}" != "workflow_dispatch" ] && \
+             [ -n "${EVENT_BEFORE:-}" ] && \
+             [ "$EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            if git show "${EVENT_BEFORE}:pubspec.yaml" >/tmp/previous_pubspec.yaml 2>/dev/null; then
+              PREV_RAW_VERSION=$(awk '/^version:/ {print $2; exit}' /tmp/previous_pubspec.yaml)
+            fi
+          fi
+
+          VERSION_CHANGED=false
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ] || [ "$RAW_VERSION" != "$PREV_RAW_VERSION" ]; then
+            VERSION_CHANGED=true
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "version_changed=$VERSION_CHANGED" >> "$GITHUB_OUTPUT"
+
+  build-android:
+    name: Build Android APK
+    needs: prepare
+    if: needs.prepare.outputs.version_changed == 'true'
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,12 +87,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Extract version
-        id: version
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
-
       - name: Build APK
-        run: flutter build apk --release --build-name=${{ steps.version.outputs.version }}
+        run: |
+          flutter build apk --release \
+            --build-name=${{ needs.prepare.outputs.version }} \
+            --build-number=${{ needs.prepare.outputs.build_number }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -48,7 +101,10 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: build-android
+    needs:
+      - prepare
+      - build-android
+    if: needs.prepare.outputs.version_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -73,18 +129,21 @@ jobs:
 
       - name: Generate changelog
         id: changelog
+        env:
+          CURRENT_TAG: ${{ needs.prepare.outputs.tag }}
         run: |
-          # 获取上一个 tag
-          PREV_TAG=$(git tag --sort=-version:refname | sed -n '2p')
+          PREV_TAG=$(git tag --sort=-version:refname | grep -Fxv "$CURRENT_TAG" | head -n 1)
 
           if [ -z "$PREV_TAG" ]; then
-            # 首次发布，取所有 commit
             COMMITS=$(git log --pretty=format:"- %s" --no-merges)
           else
             COMMITS=$(git log --pretty=format:"- %s" --no-merges "${PREV_TAG}..HEAD")
           fi
 
-          # 写入文件供后续使用
+          if [ -z "$COMMITS" ]; then
+            COMMITS="- 无可展示的提交记录"
+          fi
+
           echo "$COMMITS" > CHANGELOG.md
           echo "commits<<EOF" >> "$GITHUB_OUTPUT"
           echo "$COMMITS" >> "$GITHUB_OUTPUT"
@@ -93,8 +152,9 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Uni Yi ${{ github.ref_name }}
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Uni Yi ${{ needs.prepare.outputs.tag }}
           body: |
             ## 更新内容
 
