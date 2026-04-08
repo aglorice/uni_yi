@@ -45,7 +45,13 @@
 
 ## Screenshots
 
-> TODO: Add screenshots here
+| Landing | Home | Schedule | Notice |
+| --- | --- | --- | --- |
+| ![Landing](docs/screenshots/homepage%20-%20iPhone%2016%20Plus%20-%202026-04-08%20at%2011.05.08.png) | ![Home](docs/screenshots/home%20-%20iPhone%2016%20Plus%20-%202026-04-08%20at%2011.02.48.png) | ![Schedule](docs/screenshots/course%20-%20iPhone%2016%20Plus%20-%202026-04-08%20at%2011.05.36.png) | ![Notice](docs/screenshots/notice%20-%20iPhone%2016%20Plus%20-%202026-04-08%20at%2011.05.41.png) |
+
+| Electricity | Services | Exams | Settings |
+| --- | --- | --- | --- |
+| ![Electricity](docs/screenshots/electric%20-%20iPhone%2016%20Plus%20-%202026-04-08%20at%2011.06.17.png) | ![Services](docs/screenshots/service%20-%20iPhone%2016%20Plus%20-%202026-04-08%20at%2011.06.23.png) | ![Exams](docs/screenshots/exam%20-%20iPhone%2016%20Plus%20-%202026-04-08%20at%2011.07.44.png) | ![Settings](docs/screenshots/setting%20-%20iPhone%2016%20Plus%20-%202026-04-08%20at%2011.05.45.png) |
 
 ## Getting Started
 
