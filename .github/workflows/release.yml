@@ -1,0 +1,115 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  FLUTTER_VERSION: '3.29.0'
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Extract version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK
+        run: flutter build apk --release --build-name=${{ steps.version.outputs.version }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  release:
+    name: Create GitHub Release
+    needs: build-android
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release
+          path: artifacts/
+
+      - name: Generate APK SHA1
+        id: apk_sha1
+        run: |
+          SHA1=$(sha1sum artifacts/app-release.apk | awk '{print $1}')
+          echo "sha1=$SHA1" >> "$GITHUB_OUTPUT"
+          printf '%s  %s\n' "$SHA1" "app-release.apk" > artifacts/app-release.apk.sha1
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # 获取上一个 tag
+          PREV_TAG=$(git tag --sort=-version:refname | sed -n '2p')
+
+          if [ -z "$PREV_TAG" ]; then
+            # 首次发布，取所有 commit
+            COMMITS=$(git log --pretty=format:"- %s" --no-merges)
+          else
+            COMMITS=$(git log --pretty=format:"- %s" --no-merges "${PREV_TAG}..HEAD")
+          fi
+
+          # 写入文件供后续使用
+          echo "$COMMITS" > CHANGELOG.md
+          echo "commits<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$COMMITS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Uni Yi ${{ github.ref_name }}
+          body: |
+            ## 更新内容
+
+            ${{ steps.changelog.outputs.commits }}
+
+            ## 下载
+
+            | 文件 | SHA1 | 说明 |
+            | --- | --- | --- |
+            | `app-release.apk` | `${{ steps.apk_sha1.outputs.sha1 }}` | Android 通用 APK |
+            | `app-release.apk.sha1` | 同上 | APK 的 SHA1 校验文件 |
+
+            **完整安装包和校验文件请查看下方 Assets。**
+          files: |
+            artifacts/app-release.apk
+            artifacts/app-release.apk.sha1
+          draft: false
+          prerelease: false

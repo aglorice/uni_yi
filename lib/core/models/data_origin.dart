@@ -1,0 +1,1 @@
+enum DataOrigin { remote, cache }

@@ -1,0 +1,668 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+
+import '../../../../core/error/error_display.dart';
+import '../../../../core/error/failure.dart';
+import '../../../../shared/widgets/session_expired_dialog.dart';
+import '../../../../shared/widgets/surface_card.dart';
+import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../electricity/domain/entities/electricity_dashboard.dart';
+import '../../../electricity/presentation/controllers/electricity_controller.dart';
+import '../../../schedule/domain/entities/schedule_snapshot.dart';
+import '../../../schedule/presentation/controllers/schedule_controller.dart';
+
+class HomePage extends ConsumerWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authControllerProvider).value;
+    final scheduleAsync = ref.watch(scheduleControllerProvider);
+    final electricityAsync = ref.watch(electricityControllerProvider);
+    final syncState = _HomeSyncState.fromAsyncValue(scheduleAsync);
+    final todayCourseLine = _TodayCourseLine.fromAsyncValue(scheduleAsync);
+    final rawDisplayName = authState?.session?.displayName.trim() ?? '';
+    final displayName = rawDisplayName.isEmpty ? '同学' : rawDisplayName;
+    final dateStr = DateFormat('M月d日 EEEE', 'zh_CN').format(DateTime.now());
+
+    return RefreshIndicator(
+      onRefresh: () => ref.read(scheduleControllerProvider.notifier).refresh(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 112),
+        children: [
+          _HomeHero(
+            displayName: displayName,
+            dateLabel: dateStr,
+            syncState: syncState,
+          ),
+          const SizedBox(height: 16),
+          _TodayCourseCard(todayCourseLine: todayCourseLine),
+          const SizedBox(height: 16),
+          _ElectricityPreviewCard(electricityAsync: electricityAsync),
+          const SizedBox(height: 24),
+          const _SectionTitle(title: '常用入口', subtitle: '首页只保留真正常点开的功能'),
+          const SizedBox(height: 12),
+          const _QuickActions(),
+          const SizedBox(height: 16),
+          _HomeFooter(
+            syncState: syncState,
+            onRetry: () =>
+                ref.read(scheduleControllerProvider.notifier).refresh(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeHero extends StatelessWidget {
+  const _HomeHero({
+    required this.displayName,
+    required this.dateLabel,
+    required this.syncState,
+  });
+
+  final String displayName;
+  final String dateLabel;
+  final _HomeSyncState syncState;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(32),
+        gradient: LinearGradient(
+          colors: [
+            colorScheme.primary,
+            Color.lerp(colorScheme.primary, colorScheme.tertiary, 0.52) ??
+                colorScheme.tertiary,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.primary.withValues(alpha: 0.22),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '校园总览',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: Colors.white.withValues(alpha: 0.86),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '$displayName，你好',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              dateLabel,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: Colors.white.withValues(alpha: 0.9),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(syncState.icon, size: 16, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    syncState.label,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TodayCourseCard extends StatelessWidget {
+  const _TodayCourseCard({required this.todayCourseLine});
+
+  final _TodayCourseLine todayCourseLine;
+
+  @override
+  Widget build(BuildContext context) {
+    return SurfaceCard(
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.primaryContainer.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              todayCourseLine.icon,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '今天的课',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  todayCourseLine.text,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ElectricityPreviewCard extends StatelessWidget {
+  const _ElectricityPreviewCard({required this.electricityAsync});
+
+  final AsyncValue<ElectricityDashboard> electricityAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      child: InkWell(
+        onTap: () => context.push('/electricity'),
+        borderRadius: BorderRadius.circular(30),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: switch (electricityAsync) {
+            AsyncData(:final value) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD28A19).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(
+                        Icons.bolt_rounded,
+                        color: Color(0xFFD28A19),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '宿舍电量',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            value.binding.displayLabel,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  '${value.balance.remainingKwh.toStringAsFixed(2)} 度',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFFD28A19),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '最近更新 ${DateFormat('MM-dd HH:mm').format(value.balance.updatedAt)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            AsyncError(:final error) => Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    formatError(error).icon,
+                    color: colorScheme.onErrorContainer,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '宿舍电量',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        formatError(error).message,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            _ => Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD28A19).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(
+                    Icons.bolt_outlined,
+                    color: Color(0xFFD28A19),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '宿舍电量',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '正在同步剩余度数...',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2.2),
+                ),
+              ],
+            ),
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActions extends StatelessWidget {
+  const _QuickActions();
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      _QuickActionItem(
+        icon: Icons.school_outlined,
+        title: '成绩',
+        subtitle: '查看成绩明细',
+        color: const Color(0xFF5478A7),
+        onTap: () => context.push('/grades'),
+      ),
+      _QuickActionItem(
+        icon: Icons.assignment_outlined,
+        title: '考试',
+        subtitle: '查看考试安排',
+        color: const Color(0xFFC07A30),
+        onTap: () => context.push('/exams'),
+      ),
+      _QuickActionItem(
+        icon: Icons.notifications_active_outlined,
+        title: '通知',
+        subtitle: '查看校内分类通知',
+        color: const Color(0xFF0E6A71),
+        onTap: () => context.go('/notices'),
+      ),
+      _QuickActionItem(
+        icon: Icons.bolt_outlined,
+        title: '电量',
+        subtitle: '查看宿舍剩余度数',
+        color: const Color(0xFFD28A19),
+        onTap: () => context.push('/electricity'),
+      ),
+      _QuickActionItem(
+        icon: Icons.grid_view_outlined,
+        title: '服务',
+        subtitle: '校园服务大厅',
+        color: const Color(0xFF3A6B4F),
+        onTap: () => context.push('/services'),
+      ),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.22,
+      ),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return Card(
+          child: InkWell(
+            onTap: item.onTap,
+            borderRadius: BorderRadius.circular(30),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: item.color.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(item.icon, color: item.color),
+                  ),
+                  const Spacer(),
+                  Text(
+                    item.title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _QuickActionItem {
+  const _QuickActionItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+}
+
+class _HomeFooter extends ConsumerWidget {
+  const _HomeFooter({required this.syncState, required this.onRetry});
+
+  final _HomeSyncState syncState;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SurfaceCard(
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: syncState.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(syncState.icon, color: syncState.color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  syncState.label,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  syncState.message,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (syncState.isSessionExpired)
+            TextButton(
+              onPressed: () => showSessionExpiredDialog(context, ref),
+              child: const Text('重新登录'),
+            )
+          else if (syncState.showRetry)
+            TextButton(onPressed: onRetry, child: const Text('重试')),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeSyncState {
+  const _HomeSyncState({
+    required this.label,
+    required this.message,
+    required this.icon,
+    required this.color,
+    this.showRetry = false,
+    this.isSessionExpired = false,
+  });
+
+  final String label;
+  final String message;
+  final IconData icon;
+  final Color color;
+  final bool showRetry;
+  final bool isSessionExpired;
+
+  factory _HomeSyncState.fromAsyncValue(
+    AsyncValue<ScheduleSnapshot> scheduleAsync,
+  ) {
+    return switch (scheduleAsync) {
+      AsyncData() => const _HomeSyncState(
+        label: '教务数据已连接',
+        message: '下拉首页可以重新同步，常用功能已经可以直接使用。',
+        icon: Icons.check_circle_outline_rounded,
+        color: Color(0xFF0F6A71),
+      ),
+      AsyncError(:final error)
+          when error is SessionExpiredFailure =>
+        const _HomeSyncState(
+          label: '登录已过期',
+          message: '学校门户登录态已失效，点击重新登录或退出。',
+          icon: Icons.lock_outline,
+          color: Color(0xFFB91C1C),
+          isSessionExpired: true,
+        ),
+      AsyncError() => const _HomeSyncState(
+        label: '教务数据暂不可用',
+        message: '不影响你进入成绩、考试和课表，必要时可以重新同步。',
+        icon: Icons.sync_problem_rounded,
+        color: Color(0xFFB96A1F),
+        showRetry: true,
+      ),
+      _ => const _HomeSyncState(
+        label: '正在同步教务数据',
+        message: '首页不再展示复杂课程信息，同步完成后可直接进入课表。',
+        icon: Icons.autorenew_rounded,
+        color: Color(0xFF5478A7),
+      ),
+    };
+  }
+}
+
+class _TodayCourseLine {
+  const _TodayCourseLine({required this.text, required this.icon});
+
+  final String text;
+  final IconData icon;
+
+  factory _TodayCourseLine.fromAsyncValue(
+    AsyncValue<ScheduleSnapshot> scheduleAsync,
+  ) {
+    return switch (scheduleAsync) {
+      AsyncData(:final value) => _TodayCourseLine.fromSnapshot(value),
+      AsyncError() => const _TodayCourseLine(
+        text: '今天课程暂时不可用',
+        icon: Icons.event_busy_rounded,
+      ),
+      _ => const _TodayCourseLine(
+        text: '今天课程同步中',
+        icon: Icons.autorenew_rounded,
+      ),
+    };
+  }
+
+  factory _TodayCourseLine.fromSnapshot(ScheduleSnapshot snapshot) {
+    final entries = snapshot.sessionsForDay(DateTime.now().weekday);
+    if (entries.isEmpty) {
+      return const _TodayCourseLine(
+        text: '今天没课',
+        icon: Icons.free_breakfast_rounded,
+      );
+    }
+
+    final names = entries.map((entry) => entry.course.name).toList();
+    final preview = names.take(2).join(' / ');
+    final suffix = names.length > 2 ? ' 等${names.length}节' : '';
+
+    return _TodayCourseLine(
+      text: '今天：$preview$suffix',
+      icon: Icons.menu_book_rounded,
+    );
+  }
+}

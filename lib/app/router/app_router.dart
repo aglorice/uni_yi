@@ -1,0 +1,115 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../modules/auth/presentation/controllers/auth_controller.dart';
+import '../../modules/auth/presentation/pages/login_page.dart';
+import '../../modules/electricity/presentation/pages/electricity_page.dart';
+import '../../modules/exams/presentation/pages/exams_page.dart';
+import '../../modules/grades/presentation/pages/grades_page.dart';
+import '../../modules/home/presentation/pages/home_page.dart';
+import '../../modules/notices/domain/entities/campus_notice.dart';
+import '../../modules/notices/presentation/pages/notice_detail_page.dart';
+import '../../modules/notices/presentation/pages/notices_page.dart';
+import '../../modules/profile/presentation/pages/profile_page.dart';
+import '../../modules/schedule/presentation/pages/schedule_page.dart';
+import '../../modules/services/domain/entities/service_card_data.dart';
+import '../../modules/services/presentation/pages/service_webview_page.dart';
+import '../../modules/services/presentation/pages/services_page.dart';
+import '../shell/campus_shell.dart';
+
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final authAsync = ref.watch(authControllerProvider);
+
+  return GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      StatefulShellRoute(
+        builder: (context, state, navigationShell) {
+          return CampusShell(navigationShell: navigationShell);
+        },
+        navigatorContainerBuilder: buildCampusShellNavigatorContainer,
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: '/', builder: (context, state) => const HomePage()),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/schedule',
+                builder: (context, state) => const SchedulePage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/notices',
+                builder: (context, state) => const NoticesPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/profile',
+                builder: (context, state) => const ProfilePage(),
+              ),
+            ],
+          ),
+        ],
+      ),
+      GoRoute(path: '/grades', builder: (context, state) => const GradesPage()),
+      GoRoute(path: '/exams', builder: (context, state) => const ExamsPage()),
+      GoRoute(
+        path: '/electricity',
+        builder: (context, state) => const ElectricityPage(),
+      ),
+      GoRoute(
+        path: '/services',
+        builder: (context, state) => const ServicesPage(),
+      ),
+      GoRoute(
+        path: '/services/webview',
+        builder: (context, state) {
+          final item = state.extra;
+          if (item is! ServiceItem) {
+            return const Scaffold(body: Center(child: Text('服务参数缺失')));
+          }
+          return ServiceWebViewPage(item: item);
+        },
+      ),
+      GoRoute(
+        path: '/notices/detail',
+        builder: (context, state) {
+          final item = state.extra;
+          if (item is! CampusNoticeItem) {
+            return const Scaffold(body: Center(child: Text('通知参数缺失')));
+          }
+          return NoticeDetailPage(item: item);
+        },
+      ),
+    ],
+    redirect: (context, state) {
+      final isLogin = state.matchedLocation == '/login';
+      final isAuthenticated = authAsync.value?.isAuthenticated ?? false;
+
+      if (authAsync.isLoading) {
+        return null;
+      }
+
+      if (!isAuthenticated && !isLogin) {
+        return '/login';
+      }
+
+      if (isAuthenticated && isLogin) {
+        return '/';
+      }
+
+      return null;
+    },
+  );
+});
