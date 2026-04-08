@@ -577,14 +577,21 @@ class _WeekTimetable extends StatelessWidget {
             : minDayWidth;
         final boardWidth = sideWidth + dayWidth * dayCount + gap * columnGaps;
         final needsScroll = boardWidth > availableWidth;
-        final hintHeight = needsScroll ? (compactHeight ? 16.0 : 18.0) : 0.0;
-        final hintTopPadding = needsScroll ? (compactHeight ? 6.0 : 8.0) : 0.0;
+        final hintBlockHeight = needsScroll
+            ? (compactHeight ? 22.0 : 26.0)
+            : 0.0;
         final availableBodyHeight =
-            viewportHeight - headerHeight - hintHeight - hintTopPadding;
+            (viewportHeight - headerHeight - hintBlockHeight).clamp(
+              0.0,
+              double.infinity,
+            );
         final rawRowHeight =
             (availableBodyHeight - (model.slotCount - 1) * gap) /
             model.slotCount;
-        final rowHeight = rawRowHeight.clamp(24.0, 64.0).toDouble();
+        final preferredMinRowHeight = compactHeight ? 18.0 : 20.0;
+        final rowHeight = rawRowHeight < preferredMinRowHeight
+            ? rawRowHeight.clamp(0.0, 64.0).toDouble()
+            : rawRowHeight.clamp(preferredMinRowHeight, 64.0).toDouble();
         final bodyHeight =
             model.slotCount * rowHeight + (model.slotCount - 1) * gap;
         final dayOffsets = <int, double>{
@@ -606,24 +613,30 @@ class _WeekTimetable extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (needsScroll)
-                Padding(
-                  padding: EdgeInsets.fromLTRB(10, hintTopPadding, 10, 0),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.swipe_rounded,
-                        size: compactHeight ? 13 : 14,
-                        color: colorScheme.onSurfaceVariant,
+                SizedBox(
+                  height: hintBlockHeight,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.swipe_rounded,
+                            size: compactHeight ? 13 : 14,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          SizedBox(width: compactHeight ? 3 : 4),
+                          Text(
+                            '左右滑动查看完整课表',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontSize: compactHeight ? 10 : null,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(width: compactHeight ? 3 : 4),
-                      Text(
-                        '左右滑动查看完整课表',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: compactHeight ? 10 : null,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               SingleChildScrollView(
@@ -705,9 +718,11 @@ class _WeekTimetable extends StatelessWidget {
                                 top: p.startSlotIndex * (rowHeight + gap) + 1.5,
                                 width: dayWidth - 3,
                                 height:
-                                    p.slotSpan * rowHeight +
-                                    (p.slotSpan - 1) * gap -
-                                    3,
+                                    (p.slotSpan * rowHeight +
+                                            (p.slotSpan - 1) * gap -
+                                            3)
+                                        .clamp(0.0, double.infinity)
+                                        .toDouble(),
                                 child: _WeekCourseCard(
                                   entries: p.entries,
                                   accent: p.accent,
