@@ -31,7 +31,7 @@ class HomePage extends ConsumerWidget {
     final preferences = ref.watch(appPreferencesControllerProvider);
     final petType = PixelPetType.fromName(preferences.pixelPet);
     final rawDisplayName = authState?.session?.displayName.trim() ?? '';
-    final displayName = "宫园薰";
+    final displayName = rawDisplayName.isEmpty ? '同学' : rawDisplayName;
     final dateStr = DateFormat('M月d日 EEEE', 'zh_CN').format(DateTime.now());
 
     return RefreshIndicator(
