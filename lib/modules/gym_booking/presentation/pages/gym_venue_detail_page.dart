@@ -7,6 +7,8 @@ import '../../../../app/settings/app_preferences_controller.dart';
 import '../../../../core/error/error_display.dart';
 import '../../../../core/result/result.dart';
 import '../../../../shared/widgets/async_value_view.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
+import '../../../../shared/widgets/constrained_body.dart';
 import '../../../../shared/widgets/surface_card.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../domain/entities/gym_booking_overview.dart';
@@ -249,7 +251,13 @@ class _GymVenueDetailPageState extends ConsumerState<GymVenueDetailPage> {
     }
 
     final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(const SnackBar(content: Text('正在提交预约...')));
+    AppSnackBar.show(
+      context,
+      message: '正在提交预约...',
+      tone: AppSnackBarTone.info,
+      icon: Icons.hourglass_top_rounded,
+      duration: const Duration(seconds: 12),
+    );
 
     final result = await ref
         .read(gymBookingControllerProvider.notifier)
@@ -262,16 +270,21 @@ class _GymVenueDetailPageState extends ConsumerState<GymVenueDetailPage> {
     messenger.hideCurrentSnackBar();
     switch (result) {
       case Success<BookingRecord>(data: final record):
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('${record.venueName} ${record.slotLabel} 预约成功'),
-          ),
+        AppSnackBar.show(
+          context,
+          message: '${record.venueName} ${record.slotLabel} 预约成功',
+          tone: AppSnackBarTone.success,
+          icon: Icons.check_circle_rounded,
+          clearCurrent: false,
         );
         ref.invalidate(myGymAppointmentsProvider);
         _loadSlots();
       case FailureResult<BookingRecord>(failure: final failure):
-        messenger.showSnackBar(
-          SnackBar(content: Text(formatError(failure).message)),
+        AppSnackBar.show(
+          context,
+          message: formatError(failure).message,
+          tone: AppSnackBarTone.error,
+          clearCurrent: false,
         );
     }
   }
@@ -282,39 +295,41 @@ class _GymVenueDetailPageState extends ConsumerState<GymVenueDetailPage> {
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.venueName)),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
-        children: [
-          _BookingPanel(
-            selectedDate: _selectedDate,
-            onDateChanged: (date) {
-              setState(() => _selectedDate = date);
-              _loadSlots();
-            },
-            loading: _loadingSlots,
-            error: _slotError,
-            venue: _bookingVenue,
-            slots: _slots,
-            onBook: _bookSlot,
-          ),
-          const SizedBox(height: 14),
-          AsyncValueView(
-            value: detailAsync,
-            onRetry: () =>
-                ref.invalidate(gymVenueDetailProvider(widget.venueId)),
-            loadingLabel: '加载场地详情',
-            dataBuilder: (detail) => _VenueDetailPanel(detail: detail),
-          ),
-          const SizedBox(height: 14),
-          _ReviewPanel(
-            reviewPage: _reviewPage,
-            loading: _loadingReviews,
-            loadingMore: _loadingMoreReviews,
-            error: _reviewError,
-            onRetry: () => _loadReviews(reset: true),
-            onLoadMore: () => _loadReviews(reset: false),
-          ),
-        ],
+      body: ConstrainedBody(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+          children: [
+            _BookingPanel(
+              selectedDate: _selectedDate,
+              onDateChanged: (date) {
+                setState(() => _selectedDate = date);
+                _loadSlots();
+              },
+              loading: _loadingSlots,
+              error: _slotError,
+              venue: _bookingVenue,
+              slots: _slots,
+              onBook: _bookSlot,
+            ),
+            const SizedBox(height: 14),
+            AsyncValueView(
+              value: detailAsync,
+              onRetry: () =>
+                  ref.invalidate(gymVenueDetailProvider(widget.venueId)),
+              loadingLabel: '加载场地详情',
+              dataBuilder: (detail) => _VenueDetailPanel(detail: detail),
+            ),
+            const SizedBox(height: 14),
+            _ReviewPanel(
+              reviewPage: _reviewPage,
+              loading: _loadingReviews,
+              loadingMore: _loadingMoreReviews,
+              error: _reviewError,
+              onRetry: () => _loadReviews(reset: true),
+              onLoadMore: () => _loadReviews(reset: false),
+            ),
+          ],
+        ),
       ),
     );
   }

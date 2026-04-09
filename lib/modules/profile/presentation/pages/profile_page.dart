@@ -9,6 +9,7 @@ import '../../../../app/settings/app_preferences_controller.dart';
 import '../../../../core/error/error_display.dart';
 import '../../../../core/platform/app_installer_service.dart';
 import '../../../../core/result/result.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../shared/widgets/surface_card.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/app_update_controller.dart';
@@ -19,11 +20,6 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider).value;
-    final appInfo = ref.watch(
-      installedAppInfoProvider.select(
-        (value) => value.maybeWhen(data: (data) => data, orElse: () => null),
-      ),
-    );
     final preferences = ref.watch(appPreferencesControllerProvider);
     final controller = ref.read(appPreferencesControllerProvider.notifier);
     final session = authState?.session;
@@ -213,9 +209,11 @@ class ProfilePage extends ConsumerWidget {
                 onTap: () async {
                   await controller.reset();
                   if (context.mounted) {
-                    ScaffoldMessenger.of(
+                    AppSnackBar.show(
                       context,
-                    ).showSnackBar(const SnackBar(content: Text('外观偏好已恢复默认')));
+                      message: '外观偏好已恢复默认',
+                      tone: AppSnackBarTone.success,
+                    );
                   }
                 },
               ),
@@ -247,11 +245,8 @@ class ProfilePage extends ConsumerWidget {
               _ActionTile(
                 icon: Icons.info_outline_rounded,
                 title: '关于应用',
-                subtitle: '查看版本信息',
-                onTap: () => _showAboutDialog(
-                  context,
-                  versionLabel: appInfo?.versionLabel ?? '读取中',
-                ),
+                subtitle: '查看版本信息与 GitHub 仓库',
+                onTap: () => context.push('/about'),
               ),
             ],
           ),
@@ -279,90 +274,6 @@ class ProfilePage extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-
-  void _showAboutDialog(BuildContext context, {required String versionLabel}) {
-    final theme = Theme.of(context);
-
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Image.asset(
-                  'assets/logo/pixel_cat_logo_1024.png',
-                  fit: BoxFit.cover,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '拾邑',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    Text(
-                      'v$versionLabel',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('五邑大学校园助手，一站式管理你的校园生活。', style: theme.textTheme.bodyMedium),
-              const SizedBox(height: 16),
-              _AboutFeature(icon: Icons.calendar_today_rounded, label: '课表查询'),
-              const SizedBox(height: 10),
-              _AboutFeature(icon: Icons.school_outlined, label: '成绩与考试'),
-              const SizedBox(height: 10),
-              _AboutFeature(icon: Icons.bolt_rounded, label: '宿舍电量'),
-              const SizedBox(height: 10),
-              _AboutFeature(icon: Icons.notifications_rounded, label: '校内通知'),
-              const SizedBox(height: 10),
-              _AboutFeature(icon: Icons.grid_view_rounded, label: '校园服务'),
-              const SizedBox(height: 10),
-              _AboutFeature(icon: Icons.sports_tennis_rounded, label: '体育馆预约'),
-              const SizedBox(height: 20),
-              Text(
-                '拾取校园点滴，邑你相伴同行。',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('知道了'),
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -396,10 +307,11 @@ class ProfilePage extends ConsumerWidget {
     }
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(keysToDelete.isEmpty ? '当前没有可清除的业务缓存' : '业务缓存已清除'),
-        ),
+      AppSnackBar.show(
+        context,
+        message: keysToDelete.isEmpty ? '当前没有可清除的业务缓存' : '业务缓存已清除',
+        tone: AppSnackBarTone.success,
+        icon: Icons.delete_sweep_rounded,
       );
     }
   }
@@ -998,22 +910,29 @@ class _UpdateSheet extends ConsumerWidget {
         final installResult = outcome.installResult;
         switch (installResult.status) {
           case ApkInstallStatus.started:
-            messenger.showSnackBar(
-              SnackBar(content: Text(installResult.message ?? '已打开系统安装器')),
+            AppSnackBar.show(
+              context,
+              message: installResult.message ?? '已打开系统安装器',
+              tone: AppSnackBarTone.success,
+              icon: Icons.download_done_rounded,
+              clearCurrent: false,
             );
             Navigator.pop(context);
           case ApkInstallStatus.permissionRequired:
-            messenger.showSnackBar(
-              SnackBar(
-                content: Text(
-                  installResult.message ?? '请先允许安装未知来源应用，然后再点一次安装。',
-                ),
-              ),
+            AppSnackBar.show(
+              context,
+              message: installResult.message ?? '请先允许安装未知来源应用，然后再点一次安装。',
+              tone: AppSnackBarTone.info,
+              icon: Icons.shield_outlined,
+              clearCurrent: false,
             );
         }
       case FailureResult<AppUpdateActionOutcome>(failure: final failure):
-        messenger.showSnackBar(
-          SnackBar(content: Text(formatError(failure).message)),
+        AppSnackBar.show(
+          context,
+          message: formatError(failure).message,
+          tone: AppSnackBarTone.error,
+          clearCurrent: false,
         );
     }
   }
@@ -1064,25 +983,6 @@ class _UpdateSheetScaffold extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         child,
-      ],
-    );
-  }
-}
-
-class _AboutFeature extends StatelessWidget {
-  const _AboutFeature({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: theme.colorScheme.primary),
-        const SizedBox(width: 10),
-        Text(label, style: theme.textTheme.bodyMedium),
       ],
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../shared/widgets/async_value_view.dart';
+import '../../../../shared/widgets/constrained_body.dart';
 import '../../../../shared/widgets/surface_card.dart';
 import '../../../schedule/domain/entities/schedule_snapshot.dart';
 import '../../domain/entities/grades_snapshot.dart';
@@ -24,64 +25,66 @@ class _GradesPageState extends ConsumerState<GradesPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('成绩查询')),
-      body: AsyncValueView(
-        value: gradesAsync,
-        onRetry: () => ref.read(gradesControllerProvider.notifier).refresh(),
-        loadingLabel: '成绩同步中',
-        dataBuilder: (snapshot) {
-          final filterTerms = snapshot.filterTerms;
-          final selectedTerm = _selectedTermId == null
-              ? null
-              : snapshot.termById(_selectedTermId!);
-          final effectiveSelectedTermId = selectedTerm?.id;
-          final visibleRecords = selectedTerm == null
-              ? snapshot.records
-              : snapshot.recordsForTermId(selectedTerm.id);
-          final visibleSections = selectedTerm == null
-              ? snapshot.terms
-              : [selectedTerm.name];
+      body: ConstrainedBody(
+        child: AsyncValueView(
+          value: gradesAsync,
+          onRetry: () => ref.read(gradesControllerProvider.notifier).refresh(),
+          loadingLabel: '成绩同步中',
+          dataBuilder: (snapshot) {
+            final filterTerms = snapshot.filterTerms;
+            final selectedTerm = _selectedTermId == null
+                ? null
+                : snapshot.termById(_selectedTermId!);
+            final effectiveSelectedTermId = selectedTerm?.id;
+            final visibleRecords = selectedTerm == null
+                ? snapshot.records
+                : snapshot.recordsForTermId(selectedTerm.id);
+            final visibleSections = selectedTerm == null
+                ? snapshot.terms
+                : [selectedTerm.name];
 
-          return RefreshIndicator(
-            onRefresh: () =>
-                ref.read(gradesControllerProvider.notifier).refresh(),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-              children: [
-                _GradesHero(
-                  snapshot: snapshot,
-                  selectedTerm: selectedTerm,
-                  visibleRecords: visibleRecords,
-                  onPickTerm: () => _showTermPicker(snapshot, selectedTerm),
-                ),
-                const SizedBox(height: 16),
-                _TermFilterBar(
-                  terms: filterTerms,
-                  selectedTermId: effectiveSelectedTermId,
-                  onSelected: (termId) {
-                    setState(() {
-                      _selectedTermId = termId;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                if (selectedTerm != null && visibleRecords.isEmpty)
-                  _EmptyTermState(termName: selectedTerm.name)
-                else
-                  for (final sectionTitle in visibleSections) ...[
-                    _GradeTermSection(
-                      termName: sectionTitle,
-                      records: selectedTerm == null
-                          ? snapshot.recordsForTerm(sectionTitle)
-                          : visibleRecords,
-                      onOpenDetail: _openDetail,
-                    ),
-                    if (sectionTitle != visibleSections.last)
-                      const SizedBox(height: 16),
-                  ],
-              ],
-            ),
-          );
-        },
+            return RefreshIndicator(
+              onRefresh: () =>
+                  ref.read(gradesControllerProvider.notifier).refresh(),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                children: [
+                  _GradesHero(
+                    snapshot: snapshot,
+                    selectedTerm: selectedTerm,
+                    visibleRecords: visibleRecords,
+                    onPickTerm: () => _showTermPicker(snapshot, selectedTerm),
+                  ),
+                  const SizedBox(height: 16),
+                  _TermFilterBar(
+                    terms: filterTerms,
+                    selectedTermId: effectiveSelectedTermId,
+                    onSelected: (termId) {
+                      setState(() {
+                        _selectedTermId = termId;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  if (selectedTerm != null && visibleRecords.isEmpty)
+                    _EmptyTermState(termName: selectedTerm.name)
+                  else
+                    for (final sectionTitle in visibleSections) ...[
+                      _GradeTermSection(
+                        termName: sectionTitle,
+                        records: selectedTerm == null
+                            ? snapshot.recordsForTerm(sectionTitle)
+                            : visibleRecords,
+                        onOpenDetail: _openDetail,
+                      ),
+                      if (sectionTitle != visibleSections.last)
+                        const SizedBox(height: 16),
+                    ],
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

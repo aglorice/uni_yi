@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../app/di/app_providers.dart';
 import '../../../../core/error/error_display.dart';
 import '../../../../core/result/result.dart';
+import '../../../../shared/widgets/constrained_body.dart';
 import '../../../../shared/widgets/surface_card.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../domain/entities/gym_booking_overview.dart';
@@ -136,152 +137,154 @@ class _GymVenueSearchPageState extends ConsumerState<GymVenueSearchPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('搜索场地')),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
-          children: [
-            SurfaceCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '筛选条件',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  GymDateSelector(
-                    selectedDate: _selectedDate,
-                    onDateChanged: (date) {
-                      setState(() => _selectedDate = date);
-                      _search(reset: true);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _keywordController,
-                    textInputAction: TextInputAction.search,
-                    decoration: InputDecoration(
-                      labelText: '搜索场地名称',
-                      hintText: '例如：羽毛球、综合体育馆',
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      suffixIcon: _keywordController.text.isEmpty
-                          ? null
-                          : IconButton(
-                              onPressed: () {
-                                _keywordController.clear();
-                                setState(() {});
-                                _search(reset: true);
-                              },
-                              icon: const Icon(Icons.close_rounded),
-                            ),
-                    ),
-                    onChanged: (_) => setState(() {}),
-                    onSubmitted: (_) => _search(reset: true),
-                  ),
-                  const SizedBox(height: 12),
-                  _DetailedFilterCard(
-                    modelAsync: modelAsync,
-                    selectedVenueType: _selectedVenueType,
-                    selectedSport: _selectedSport,
-                    onVenueTypeSelected: (value) {
-                      setState(() => _selectedVenueType = value);
-                      _search(reset: true);
-                    },
-                    onSportSelected: (value) {
-                      setState(() => _selectedSport = value);
-                      _search(reset: true);
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            _keywordController.clear();
-                            setState(() {
-                              _selectedVenueType = null;
-                              _selectedSport = null;
-                            });
-                            _search(reset: true);
-                          },
-                          child: const Text('清空条件'),
-                        ),
+      body: ConstrainedBody(
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+            children: [
+              SurfaceCard(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '筛选条件',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () => _search(reset: true),
-                          child: const Text('开始搜索'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    GymDateSelector(
+                      selectedDate: _selectedDate,
+                      onDateChanged: (date) {
+                        setState(() => _selectedDate = date);
+                        _search(reset: true);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _keywordController,
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        labelText: '搜索场地名称',
+                        hintText: '例如：羽毛球、综合体育馆',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: _keywordController.text.isEmpty
+                            ? null
+                            : IconButton(
+                                onPressed: () {
+                                  _keywordController.clear();
+                                  setState(() {});
+                                  _search(reset: true);
+                                },
+                                icon: const Icon(Icons.close_rounded),
+                              ),
                       ),
-                    ],
-                  ),
-                ],
+                      onChanged: (_) => setState(() {}),
+                      onSubmitted: (_) => _search(reset: true),
+                    ),
+                    const SizedBox(height: 12),
+                    _DetailedFilterCard(
+                      modelAsync: modelAsync,
+                      selectedVenueType: _selectedVenueType,
+                      selectedSport: _selectedSport,
+                      onVenueTypeSelected: (value) {
+                        setState(() => _selectedVenueType = value);
+                        _search(reset: true);
+                      },
+                      onSportSelected: (value) {
+                        setState(() => _selectedSport = value);
+                        _search(reset: true);
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              _keywordController.clear();
+                              setState(() {
+                                _selectedVenueType = null;
+                                _selectedSport = null;
+                              });
+                              _search(reset: true);
+                            },
+                            child: const Text('清空条件'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () => _search(reset: true),
+                            child: const Text('开始搜索'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 14),
-            if (_page != null)
-              _SearchSummaryCard(page: _page!, loading: _loadingMore),
-            if (_loading && _page == null)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 48),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (_error != null && _page == null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 48),
-                child: Center(
-                  child: Text(
-                    formatError(_error!).message,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.error,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              )
-            else if (_page != null && _page!.venues.isEmpty)
-              const _SearchEmptyState()
-            else ...[
-              ...?_page?.venues.map((venue) {
-                final slots = _page?.slotsByVenue[venue.id] ?? const [];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _VenueSearchCard(
-                    venue: venue,
-                    slots: slots,
-                    selectedDate: _selectedDate,
-                  ),
-                );
-              }),
-              if (_error != null)
+              const SizedBox(height: 14),
+              if (_page != null)
+                _SearchSummaryCard(page: _page!, loading: _loadingMore),
+              if (_loading && _page == null)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_error != null && _page == null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    formatError(_error!).message,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.error,
+                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  child: Center(
+                    child: Text(
+                      formatError(_error!).message,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                ),
-              if (_page?.hasMore == true)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: FilledButton.tonal(
-                    onPressed: _loadingMore
-                        ? null
-                        : () => _search(reset: false),
-                    child: Text(_loadingMore ? '加载中...' : '加载更多'),
+                )
+              else if (_page != null && _page!.venues.isEmpty)
+                const _SearchEmptyState()
+              else ...[
+                ...?_page?.venues.map((venue) {
+                  final slots = _page?.slotsByVenue[venue.id] ?? const [];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _VenueSearchCard(
+                      venue: venue,
+                      slots: slots,
+                      selectedDate: _selectedDate,
+                    ),
+                  );
+                }),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      formatError(_error!).message,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
+                if (_page?.hasMore == true)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: FilledButton.tonal(
+                      onPressed: _loadingMore
+                          ? null
+                          : () => _search(reset: false),
+                      child: Text(_loadingMore ? '加载中...' : '加载更多'),
+                    ),
+                  ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

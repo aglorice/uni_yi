@@ -6,6 +6,8 @@ import '../../core/error/failure.dart';
 import '../../modules/auth/presentation/controllers/auth_controller.dart';
 import '../../modules/electricity/presentation/controllers/electricity_controller.dart';
 import '../../modules/schedule/presentation/controllers/schedule_controller.dart';
+import '../layout/breakpoints.dart';
+import '../../shared/widgets/constrained_body.dart';
 import '../../shared/widgets/session_expired_dialog.dart';
 
 Widget buildCampusShellNavigatorContainer(
@@ -30,6 +32,7 @@ class CampusShell extends ConsumerStatefulWidget {
 
 class _CampusShellState extends ConsumerState<CampusShell> {
   bool _sessionDialogShown = false;
+  bool _desktopRailExpanded = true;
 
   static const _destinations = [
     _CampusDestination(
@@ -86,7 +89,9 @@ class _CampusShellState extends ConsumerState<CampusShell> {
     }
 
     final width = MediaQuery.sizeOf(context).width;
-    final useRail = width >= 600;
+    final useRail = width >= AppBreakpoints.rail;
+    final isDesktop = width >= AppBreakpoints.desktop;
+    final railExpanded = isDesktop && _desktopRailExpanded;
 
     if (useRail) {
       return Scaffold(
@@ -103,7 +108,22 @@ class _CampusShellState extends ConsumerState<CampusShell> {
                         index == widget.navigationShell.currentIndex,
                   );
                 },
-                labelType: NavigationRailLabelType.all,
+                extended: railExpanded,
+                minWidth: 72,
+                minExtendedWidth: 196,
+                leading: isDesktop
+                    ? _DesktopRailHeader(
+                        expanded: railExpanded,
+                        onToggle: () {
+                          setState(() {
+                            _desktopRailExpanded = !_desktopRailExpanded;
+                          });
+                        },
+                      )
+                    : null,
+                labelType: isDesktop
+                    ? NavigationRailLabelType.none
+                    : NavigationRailLabelType.all,
                 destinations: [
                   for (final d in _destinations)
                     NavigationRailDestination(
@@ -114,7 +134,7 @@ class _CampusShellState extends ConsumerState<CampusShell> {
                 ],
               ),
               const VerticalDivider(thickness: 1, width: 1),
-              Expanded(child: widget.navigationShell),
+              Expanded(child: ConstrainedBody(child: widget.navigationShell)),
             ],
           ),
         ),
@@ -122,10 +142,7 @@ class _CampusShellState extends ConsumerState<CampusShell> {
     }
 
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: widget.navigationShell,
-      ),
+      body: SafeArea(bottom: false, child: widget.navigationShell),
       bottomNavigationBar: NavigationBar(
         selectedIndex: widget.navigationShell.currentIndex,
         onDestinationSelected: (index) {
@@ -157,6 +174,117 @@ class _CampusDestination {
   final String label;
   final IconData icon;
   final IconData selectedIcon;
+}
+
+class _DesktopRailHeader extends StatelessWidget {
+  const _DesktopRailHeader({required this.expanded, required this.onToggle});
+
+  final bool expanded;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: expanded
+          ? Padding(
+              key: const ValueKey('expanded'),
+              padding: const EdgeInsets.fromLTRB(14, 16, 12, 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      Icons.school_rounded,
+                      color: colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '拾邑',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _RailToggleButton(expanded: true, onPressed: onToggle),
+                ],
+              ),
+            )
+          : Padding(
+              key: const ValueKey('collapsed'),
+              padding: const EdgeInsets.fromLTRB(8, 16, 8, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      Icons.school_rounded,
+                      color: colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _RailToggleButton(expanded: false, onPressed: onToggle),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+class _RailToggleButton extends StatelessWidget {
+  const _RailToggleButton({required this.expanded, required this.onPressed});
+
+  final bool expanded;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Material(
+      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.78),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(14),
+        child: Tooltip(
+          message: expanded ? '收起导航' : '展开导航',
+          child: SizedBox(
+            width: 36,
+            height: 36,
+            child: Icon(
+              expanded
+                  ? Icons.keyboard_double_arrow_left_rounded
+                  : Icons.keyboard_double_arrow_right_rounded,
+              size: 18,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _AnimatedBranchNavigatorContainer extends StatefulWidget {

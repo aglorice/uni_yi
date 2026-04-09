@@ -127,6 +127,16 @@ class AppTheme {
               const TextStyle();
         }),
       ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: brightness == Brightness.light
+            ? Colors.white
+            : colorScheme.surfaceContainerLow,
+        indicatorColor: _mix(
+          colorScheme.primaryContainer,
+          colorScheme.primary,
+          0.12,
+        ),
+      ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {

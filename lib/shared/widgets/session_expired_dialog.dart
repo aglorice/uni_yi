@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../modules/auth/presentation/controllers/auth_controller.dart';
+import 'app_snackbar.dart';
 
 enum _SessionExpiredAction { relogin, logout }
 
@@ -26,8 +27,7 @@ Future<void> showSessionExpiredDialog(
       content: const Text('学校门户登录态已失效。已为你保存了账号密码，是否重新登录？'),
       actions: [
         TextButton(
-          onPressed: () =>
-              Navigator.pop(context, _SessionExpiredAction.logout),
+          onPressed: () => Navigator.pop(context, _SessionExpiredAction.logout),
           child: const Text('退出登录'),
         ),
         FilledButton(
@@ -43,11 +43,12 @@ Future<void> showSessionExpiredDialog(
 
   switch (action) {
     case _SessionExpiredAction.relogin:
-      final success =
-          await ref.read(authControllerProvider.notifier).relogin();
+      final success = await ref.read(authControllerProvider.notifier).relogin();
       if (context.mounted && !success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('重新登录失败，请检查网络或重新输入密码。')),
+        AppSnackBar.show(
+          context,
+          message: '重新登录失败，请检查网络或重新输入密码。',
+          tone: AppSnackBarTone.error,
         );
       }
     case _SessionExpiredAction.logout:

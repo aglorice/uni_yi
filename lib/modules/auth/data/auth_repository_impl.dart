@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import '../../../core/error/failure.dart';
 import '../../../core/result/result.dart';
 import '../../../integrations/school_portal/school_portal_gateway.dart';
@@ -24,8 +26,17 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Result<AppSession>> login(SchoolCredential credential) async {
     final result = await _gateway.login(credential);
     if (result case Success<AppSession>(data: final session)) {
-      await _credentialVault.save(credential);
       await _sessionStore.save(session);
+      try {
+        await _credentialVault.save(credential);
+      } catch (error, stackTrace) {
+        developer.log(
+          'Failed to persist school credentials; keeping the current session only.',
+          name: 'AuthRepositoryImpl',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
       return Success(session);
     }
 
@@ -34,13 +45,33 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> logout() async {
-    await _credentialVault.clear();
+    try {
+      await _credentialVault.clear();
+    } catch (error, stackTrace) {
+      developer.log(
+        'Failed to clear persisted school credentials.',
+        name: 'AuthRepositoryImpl',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
     await _sessionStore.clear();
   }
 
   @override
   Future<Result<AppSession>> refreshSession() async {
-    final credential = await _credentialVault.read();
+    SchoolCredential? credential;
+    try {
+      credential = await _credentialVault.read();
+    } catch (error, stackTrace) {
+      developer.log(
+        'Failed to read persisted school credentials.',
+        name: 'AuthRepositoryImpl',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return const FailureResult(AuthenticationFailure('无法读取本地保存的登录凭证，请重新登录。'));
+    }
     if (credential == null) {
       return const FailureResult(AuthenticationFailure('未找到已保存的登录凭证。'));
     }

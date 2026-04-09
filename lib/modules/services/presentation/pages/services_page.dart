@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../shared/widgets/async_value_view.dart';
+import '../../../../shared/widgets/constrained_body.dart';
 import '../../domain/entities/service_card_data.dart';
 import '../controllers/services_controller.dart';
 
@@ -15,20 +16,23 @@ class ServicesPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('校园服务')),
-      body: AsyncValueView(
-        value: servicesAsync,
-        onRetry: () => ref.read(servicesControllerProvider.notifier).refresh(),
-        loadingLabel: '加载服务列表',
-        dataBuilder: (state) {
-          if (state.groups.isEmpty) {
-            return const Center(child: Text('暂无服务数据'));
-          }
-          return RefreshIndicator(
-            onRefresh: () =>
-                ref.read(servicesControllerProvider.notifier).refresh(),
-            child: _GroupsView(state: state),
-          );
-        },
+      body: ConstrainedBody(
+        child: AsyncValueView(
+          value: servicesAsync,
+          onRetry: () =>
+              ref.read(servicesControllerProvider.notifier).refresh(),
+          loadingLabel: '加载服务列表',
+          dataBuilder: (state) {
+            if (state.groups.isEmpty) {
+              return const Center(child: Text('暂无服务数据'));
+            }
+            return RefreshIndicator(
+              onRefresh: () =>
+                  ref.read(servicesControllerProvider.notifier).refresh(),
+              child: _GroupsView(state: state),
+            );
+          },
+        ),
       ),
     );
   }

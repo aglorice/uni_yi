@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../../../app/di/app_providers.dart';
 import '../../../../core/error/error_display.dart';
 import '../../../../shared/widgets/async_value_view.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
+import '../../../../shared/widgets/constrained_body.dart';
 import '../../../../shared/widgets/surface_card.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../domain/entities/appointment_detail.dart';
@@ -28,13 +30,15 @@ class GymAppointmentDetailPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('预约详情')),
-      body: AsyncValueView(
-        value: detailAsync,
-        onRetry: () =>
-            ref.invalidate(gymAppointmentDetailProvider(appointmentId)),
-        loadingLabel: '加载预约详情',
-        dataBuilder: (detail) =>
-            _DetailContent(detail: detail, prefillRecord: prefillRecord),
+      body: ConstrainedBody(
+        child: AsyncValueView(
+          value: detailAsync,
+          onRetry: () =>
+              ref.invalidate(gymAppointmentDetailProvider(appointmentId)),
+          loadingLabel: '加载预约详情',
+          dataBuilder: (detail) =>
+              _DetailContent(detail: detail, prefillRecord: prefillRecord),
+        ),
       ),
     );
   }
@@ -235,14 +239,25 @@ class _DetailContent extends ConsumerWidget {
     }
 
     final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(const SnackBar(content: Text('正在取消预约...')));
+    AppSnackBar.show(
+      context,
+      message: '正在取消预约...',
+      tone: AppSnackBarTone.info,
+      icon: Icons.hourglass_top_rounded,
+      duration: const Duration(seconds: 12),
+    );
 
     final authAsync = ref.read(authControllerProvider);
     final session = authAsync.value?.session;
 
     if (session == null) {
       messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(const SnackBar(content: Text('未登录，无法取消预约。')));
+      AppSnackBar.show(
+        context,
+        message: '未登录，无法取消预约。',
+        tone: AppSnackBarTone.error,
+        clearCurrent: false,
+      );
       return;
     }
 
@@ -258,12 +273,21 @@ class _DetailContent extends ConsumerWidget {
 
     messenger.hideCurrentSnackBar();
     if (result.isSuccess) {
-      messenger.showSnackBar(const SnackBar(content: Text('取消预约成功')));
+      AppSnackBar.show(
+        context,
+        message: '取消预约成功',
+        tone: AppSnackBarTone.success,
+        icon: Icons.check_circle_rounded,
+        clearCurrent: false,
+      );
       ref.invalidate(gymAppointmentDetailProvider(detail.id));
       ref.invalidate(myGymAppointmentsProvider);
     } else {
-      messenger.showSnackBar(
-        SnackBar(content: Text(formatError(result.failureOrNull!).message)),
+      AppSnackBar.show(
+        context,
+        message: formatError(result.failureOrNull!).message,
+        tone: AppSnackBarTone.error,
+        clearCurrent: false,
       );
     }
   }

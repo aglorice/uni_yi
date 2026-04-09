@@ -9,6 +9,8 @@ import '../../../../core/error/error_display.dart';
 import '../../../../core/platform/file_save_service.dart';
 import '../../../../core/result/result.dart';
 import '../../../../shared/widgets/async_value_view.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
+import '../../../../shared/widgets/constrained_body.dart';
 import '../../domain/entities/campus_notice.dart';
 import '../controllers/notice_detail_controller.dart';
 
@@ -23,68 +25,70 @@ class NoticeDetailPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(item.categoryLabel ?? item.category.name)),
-      body: AsyncValueView(
-        value: detailAsync,
-        onRetry: () => ref.invalidate(noticeDetailProvider(item)),
-        loadingLabel: '加载中',
-        dataBuilder: (detail) => RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(noticeDetailProvider(item));
-            await ref.read(noticeDetailProvider(item).future);
-          },
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-            children: [
-              Text(
-                detail.title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  height: 1.35,
-                  fontSize: 20,
+      body: ConstrainedBody(
+        child: AsyncValueView(
+          value: detailAsync,
+          onRetry: () => ref.invalidate(noticeDetailProvider(item)),
+          loadingLabel: '加载中',
+          dataBuilder: (detail) => RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(noticeDetailProvider(item));
+              await ref.read(noticeDetailProvider(item).future);
+            },
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              children: [
+                Text(
+                  detail.title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    height: 1.35,
+                    fontSize: 20,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _MetaRow(detail: detail),
-              const SizedBox(height: 20),
-              for (final block in detail.contentBlocks)
-                switch (block) {
-                  NoticeTextBlock(:final text) => Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: SelectableText(
-                      text,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontSize: 16,
-                        height: 1.8,
+                const SizedBox(height: 12),
+                _MetaRow(detail: detail),
+                const SizedBox(height: 20),
+                for (final block in detail.contentBlocks)
+                  switch (block) {
+                    NoticeTextBlock(:final text) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: SelectableText(
+                        text,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontSize: 16,
+                          height: 1.8,
+                        ),
                       ),
                     ),
-                  ),
-                  NoticeImageBlock(:final url) => Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: _NoticeImage(
-                      url: url,
-                      referer: detail.item.detailUrl,
+                    NoticeImageBlock(:final url) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _NoticeImage(
+                        url: url,
+                        referer: detail.item.detailUrl,
+                      ),
+                    ),
+                  },
+                if (detail.attachments.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    '附件',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                },
-              if (detail.attachments.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Text(
-                  '附件',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 10),
-                for (final attachment in detail.attachments) ...[
-                  _AttachmentTile(
-                    attachment: attachment,
-                    referer: detail.item.detailUri,
-                  ),
                   const SizedBox(height: 10),
+                  for (final attachment in detail.attachments) ...[
+                    _AttachmentTile(
+                      attachment: attachment,
+                      referer: detail.item.detailUri,
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                 ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -216,12 +220,19 @@ class _AttachmentTile extends ConsumerWidget {
     messenger.hideCurrentSnackBar();
     switch (result) {
       case Success<SavedFile>(data: final file):
-        messenger.showSnackBar(
-          SnackBar(content: Text('${file.fileName} 已保存到 ${file.path}')),
+        AppSnackBar.show(
+          context,
+          message: '${file.fileName} 已保存到 ${file.path}',
+          tone: AppSnackBarTone.success,
+          icon: Icons.download_done_rounded,
+          clearCurrent: false,
         );
       case FailureResult<SavedFile>(failure: final failure):
-        messenger.showSnackBar(
-          SnackBar(content: Text(formatError(failure).message)),
+        AppSnackBar.show(
+          context,
+          message: formatError(failure).message,
+          tone: AppSnackBarTone.error,
+          clearCurrent: false,
         );
     }
   }
@@ -393,12 +404,19 @@ class _NoticeImagePreviewPage extends ConsumerWidget {
     messenger.hideCurrentSnackBar();
     switch (result) {
       case Success<SavedFile>(data: final file):
-        messenger.showSnackBar(
-          SnackBar(content: Text('${file.fileName} 已保存到 ${file.path}')),
+        AppSnackBar.show(
+          context,
+          message: '${file.fileName} 已保存到 ${file.path}',
+          tone: AppSnackBarTone.success,
+          icon: Icons.download_done_rounded,
+          clearCurrent: false,
         );
       case FailureResult<SavedFile>(failure: final failure):
-        messenger.showSnackBar(
-          SnackBar(content: Text(formatError(failure).message)),
+        AppSnackBar.show(
+          context,
+          message: formatError(failure).message,
+          tone: AppSnackBarTone.error,
+          clearCurrent: false,
         );
     }
   }

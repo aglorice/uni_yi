@@ -9,6 +9,7 @@ import '../../../../app/settings/app_preferences_controller.dart';
 import '../../../../core/error/error_display.dart';
 import '../../../../core/result/result.dart';
 import '../../../../shared/widgets/async_value_view.dart';
+import '../../../../shared/widgets/constrained_body.dart';
 import '../../../../shared/widgets/surface_card.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../domain/entities/gym_booking_overview.dart';
@@ -39,32 +40,34 @@ class GymBookingPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: AsyncValueView(
-        value: overviewAsync,
-        onRetry: controller.refresh,
-        loadingLabel: '同步体育场预约信息',
-        dataBuilder: (overview) {
-          return RefreshIndicator(
-            onRefresh: controller.refresh,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
-              children: [
-                _OverviewHero(
-                  overview: overview,
-                  selectedDate: selectedDate,
-                  onDateChanged: controller.changeDate,
-                ),
-                const SizedBox(height: 14),
-                _QuickActions(selectedDate: selectedDate),
-                const SizedBox(height: 14),
-                _RecommendationSection(
-                  selectedDate: selectedDate,
-                  preferences: preferences,
-                ),
-              ],
-            ),
-          );
-        },
+      body: ConstrainedBody(
+        child: AsyncValueView(
+          value: overviewAsync,
+          onRetry: controller.refresh,
+          loadingLabel: '同步体育场预约信息',
+          dataBuilder: (overview) {
+            return RefreshIndicator(
+              onRefresh: controller.refresh,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+                children: [
+                  _OverviewHero(
+                    overview: overview,
+                    selectedDate: selectedDate,
+                    onDateChanged: controller.changeDate,
+                  ),
+                  const SizedBox(height: 14),
+                  _QuickActions(selectedDate: selectedDate),
+                  const SizedBox(height: 14),
+                  _RecommendationSection(
+                    selectedDate: selectedDate,
+                    preferences: preferences,
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

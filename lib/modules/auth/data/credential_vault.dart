@@ -1,6 +1,10 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/entities/school_credential.dart';
+
+const _usernameKey = 'auth.username';
+const _passwordKey = 'auth.password';
 
 abstract class CredentialVault {
   Future<void> save(SchoolCredential credential);
@@ -10,9 +14,6 @@ abstract class CredentialVault {
 
 class SecureCredentialVault implements CredentialVault {
   SecureCredentialVault(this._storage);
-
-  static const _usernameKey = 'auth.username';
-  static const _passwordKey = 'auth.password';
 
   final FlutterSecureStorage _storage;
 
@@ -38,6 +39,36 @@ class SecureCredentialVault implements CredentialVault {
   Future<void> save(SchoolCredential credential) async {
     await _storage.write(key: _usernameKey, value: credential.username);
     await _storage.write(key: _passwordKey, value: credential.password);
+  }
+}
+
+class SharedPreferencesCredentialVault implements CredentialVault {
+  SharedPreferencesCredentialVault(this._preferences);
+
+  final SharedPreferences _preferences;
+
+  @override
+  Future<void> clear() async {
+    await _preferences.remove(_usernameKey);
+    await _preferences.remove(_passwordKey);
+  }
+
+  @override
+  Future<SchoolCredential?> read() async {
+    final username = _preferences.getString(_usernameKey);
+    final password = _preferences.getString(_passwordKey);
+
+    if (username == null || password == null) {
+      return null;
+    }
+
+    return SchoolCredential(username: username, password: password);
+  }
+
+  @override
+  Future<void> save(SchoolCredential credential) async {
+    await _preferences.setString(_usernameKey, credential.username);
+    await _preferences.setString(_passwordKey, credential.password);
   }
 }
 

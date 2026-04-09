@@ -153,6 +153,10 @@ bool Win32Window::Show() {
   return ShowWindow(window_handle_, SW_SHOWNORMAL);
 }
 
+void Win32Window::SetMinSize(const Size& size) {
+  min_size_ = size;
+}
+
 // static
 LRESULT CALLBACK Win32Window::WndProc(HWND const window,
                                       UINT const message,
@@ -203,6 +207,18 @@ Win32Window::MessageHandler(HWND hwnd,
         // Size and position the child window.
         MoveWindow(child_content_, rect.left, rect.top, rect.right - rect.left,
                    rect.bottom - rect.top, TRUE);
+      }
+      return 0;
+    }
+    case WM_GETMINMAXINFO: {
+      if (min_size_) {
+        const UINT dpi = GetDpiForWindow(hwnd);
+        const double scale_factor = dpi / 96.0;
+        auto* minmax_info = reinterpret_cast<MINMAXINFO*>(lparam);
+        minmax_info->ptMinTrackSize.x =
+            Scale(min_size_->width, scale_factor);
+        minmax_info->ptMinTrackSize.y =
+            Scale(min_size_->height, scale_factor);
       }
       return 0;
     }

@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/settings/app_preferences.dart';
 import '../../../../app/settings/app_preferences_controller.dart';
 import '../../../../core/error/error_display.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
+import '../../../../shared/widgets/constrained_body.dart';
 import '../../../../shared/widgets/surface_card.dart';
 import '../../domain/entities/gym_booking_overview.dart';
 import '../../domain/entities/gym_search_filter.dart';
@@ -23,18 +25,20 @@ class GymBookingProfilePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('预约偏好')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
-        children: [
-          _ProfileInfoCard(preferences: preferences),
-          const SizedBox(height: 14),
-          _PreferenceCard(
-            preferences: preferences,
-            searchModelAsync: searchModelAsync,
-          ),
-          const SizedBox(height: 14),
-          _ProfileAppointmentsCard(appointmentsAsync: appointmentsAsync),
-        ],
+      body: ConstrainedBody(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+          children: [
+            _ProfileInfoCard(preferences: preferences),
+            const SizedBox(height: 14),
+            _PreferenceCard(
+              preferences: preferences,
+              searchModelAsync: searchModelAsync,
+            ),
+            const SizedBox(height: 14),
+            _ProfileAppointmentsCard(appointmentsAsync: appointmentsAsync),
+          ],
+        ),
       ),
     );
   }
@@ -98,9 +102,12 @@ class _ProfileInfoCard extends ConsumerWidget {
     if (!context.mounted) {
       return;
     }
-    ScaffoldMessenger.of(
+    AppSnackBar.show(
       context,
-    ).showSnackBar(const SnackBar(content: Text('预约手机号已更新')));
+      message: '预约手机号已更新',
+      tone: AppSnackBarTone.success,
+      icon: Icons.phone_android_rounded,
+    );
   }
 }
 

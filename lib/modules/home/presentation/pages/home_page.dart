@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../app/layout/breakpoints.dart';
 import '../../../../core/error/error_display.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../shared/widgets/pixel_pet.dart';
@@ -34,49 +35,95 @@ class HomePage extends ConsumerWidget {
     final displayName = rawDisplayName.isEmpty ? '同学' : rawDisplayName;
     final dateStr = DateFormat('M月d日 EEEE', 'zh_CN').format(DateTime.now());
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        await Future.wait([
-          ref.read(scheduleControllerProvider.notifier).refresh(),
-          ref.read(electricityControllerProvider.notifier).refresh(),
-          ref.read(myGymAppointmentsProvider.notifier).refresh(),
-        ]);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useDesktopOverview =
+            MediaQuery.sizeOf(context).width >= AppBreakpoints.desktop &&
+            constraints.maxWidth >= 760;
+
+        final children = useDesktopOverview
+            ? <Widget>[
+                _HomeHero(
+                  displayName: displayName,
+                  dateLabel: dateStr,
+                  syncState: syncState,
+                  petType: petType,
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 11,
+                      child: _TodayCourseCard(scheduleAsync: scheduleAsync),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      flex: 9,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _ElectricityPreviewCard(
+                            electricityAsync: electricityAsync,
+                          ),
+                          const SizedBox(height: 14),
+                          _GymAppointmentsPreviewCard(
+                            appointmentsAsync: appointmentsAsync,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const _HomeQuickActionsSection(),
+                const SizedBox(height: 16),
+                _HomeFooter(
+                  syncState: syncState,
+                  onRetry: () =>
+                      ref.read(scheduleControllerProvider.notifier).refresh(),
+                ),
+              ]
+            : <Widget>[
+                _HomeHero(
+                  displayName: displayName,
+                  dateLabel: dateStr,
+                  syncState: syncState,
+                  petType: petType,
+                ),
+                const SizedBox(height: 14),
+                _TodayCourseCard(scheduleAsync: scheduleAsync),
+                const SizedBox(height: 10),
+                _ElectricityPreviewCard(electricityAsync: electricityAsync),
+                const SizedBox(height: 10),
+                _GymAppointmentsPreviewCard(
+                  appointmentsAsync: appointmentsAsync,
+                ),
+                const SizedBox(height: 22),
+                const _HomeQuickActionsSection(),
+                const SizedBox(height: 16),
+                _HomeFooter(
+                  syncState: syncState,
+                  onRetry: () =>
+                      ref.read(scheduleControllerProvider.notifier).refresh(),
+                ),
+              ];
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            await Future.wait([
+              ref.read(scheduleControllerProvider.notifier).refresh(),
+              ref.read(electricityControllerProvider.notifier).refresh(),
+              ref.read(myGymAppointmentsProvider.notifier).refresh(),
+            ]);
+          },
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 112),
+            children: children,
+          ),
+        );
       },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 112),
-        children: [
-          _HomeHero(
-            displayName: displayName,
-            dateLabel: dateStr,
-            syncState: syncState,
-            petType: petType,
-          ),
-          const SizedBox(height: 14),
-          _TodayCourseCard(scheduleAsync: scheduleAsync),
-          const SizedBox(height: 10),
-          _ElectricityPreviewCard(electricityAsync: electricityAsync),
-          const SizedBox(height: 10),
-          _GymAppointmentsPreviewCard(appointmentsAsync: appointmentsAsync),
-          const SizedBox(height: 22),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              '常用入口',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ),
-          const _QuickActions(),
-          const SizedBox(height: 16),
-          _HomeFooter(
-            syncState: syncState,
-            onRetry: () =>
-                ref.read(scheduleControllerProvider.notifier).refresh(),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -789,6 +836,29 @@ class _HomeGymEmptyState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _HomeQuickActionsSection extends StatelessWidget {
+  const _HomeQuickActionsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            '常用入口',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
+        const _QuickActions(),
+      ],
     );
   }
 }

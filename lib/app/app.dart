@@ -40,7 +40,7 @@ class _UniYiAppState extends ConsumerState<UniYiApp> {
     final preferences = ref.watch(appPreferencesControllerProvider);
 
     return MaterialApp.router(
-      title: '拾邑',
+      title: '拾邑 | 五邑大学校园助手',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(preferences),
       darkTheme: AppTheme.dark(preferences),

@@ -18,11 +18,13 @@ import '../../modules/home/presentation/pages/home_page.dart';
 import '../../modules/notices/domain/entities/campus_notice.dart';
 import '../../modules/notices/presentation/pages/notice_detail_page.dart';
 import '../../modules/notices/presentation/pages/notices_page.dart';
+import '../../modules/profile/presentation/pages/about_app_page.dart';
 import '../../modules/profile/presentation/pages/profile_page.dart';
 import '../../modules/schedule/presentation/pages/schedule_page.dart';
 import '../../modules/services/domain/entities/service_card_data.dart';
 import '../../modules/services/presentation/pages/service_webview_page.dart';
 import '../../modules/services/presentation/pages/services_page.dart';
+import '../../shared/pages/link_webview_page.dart';
 import '../shell/campus_shell.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -71,6 +73,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/grades', builder: (context, state) => const GradesPage()),
       GoRoute(path: '/exams', builder: (context, state) => const ExamsPage()),
+      GoRoute(
+        path: '/about',
+        builder: (context, state) => const AboutAppPage(),
+      ),
+      GoRoute(
+        path: '/browser',
+        builder: (context, state) {
+          final title = state.uri.queryParameters['title'] ?? '链接';
+          final urlText = state.uri.queryParameters['url'];
+          final uri = urlText == null ? null : Uri.tryParse(urlText);
+          if (uri == null || !uri.hasScheme) {
+            return const Scaffold(body: Center(child: Text('链接参数缺失')));
+          }
+          return LinkWebViewPage(title: title, uri: uri);
+        },
+      ),
       GoRoute(
         path: '/electricity',
         builder: (context, state) => const ElectricityPage(),

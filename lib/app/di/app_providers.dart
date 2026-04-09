@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -83,7 +84,16 @@ final jsonCacheStoreProvider = Provider<JsonCacheStore>(
 );
 
 final credentialVaultProvider = Provider<CredentialVault>(
-  (ref) => SecureCredentialVault(const FlutterSecureStorage()),
+  (ref) {
+    final preferences = ref.watch(sharedPreferencesProvider);
+    if (kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux) {
+      return SharedPreferencesCredentialVault(preferences);
+    }
+    return SecureCredentialVault(const FlutterSecureStorage());
+  },
 );
 
 final sessionStoreProvider = Provider<SessionStore>(

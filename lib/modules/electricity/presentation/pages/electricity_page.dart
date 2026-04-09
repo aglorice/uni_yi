@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/error/error_display.dart';
 import '../../../../shared/widgets/async_value_view.dart';
+import '../../../../shared/widgets/constrained_body.dart';
 import '../../../../shared/widgets/surface_card.dart';
 import '../../domain/entities/electricity_dashboard.dart';
 import '../controllers/electricity_controller.dart';
@@ -33,33 +34,35 @@ class ElectricityPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: AsyncValueView(
-        value: electricityAsync,
-        onRetry: () =>
-            ref.read(electricityControllerProvider.notifier).refresh(),
-        loadingLabel: '电量数据同步中',
-        dataBuilder: (dashboard) => RefreshIndicator(
-          onRefresh: () =>
+      body: ConstrainedBody(
+        child: AsyncValueView(
+          value: electricityAsync,
+          onRetry: () =>
               ref.read(electricityControllerProvider.notifier).refresh(),
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
-            children: [
-              _BalanceHeroCard(dashboard: dashboard),
-              const SizedBox(height: 16),
-              _MetricsGrid(dashboard: dashboard),
-              const SizedBox(height: 16),
-              _PeriodSelector(
-                selectedPeriod: dashboard.selectedPeriod,
-                onSelected: (period) => ref
-                    .read(electricityControllerProvider.notifier)
-                    .selectPeriod(period),
-              ),
-              const SizedBox(height: 16),
-              _RechargeTrendCard(dashboard: dashboard),
-              const SizedBox(height: 16),
-              _RechargeRecordsCard(dashboard: dashboard),
-            ],
+          loadingLabel: '电量数据同步中',
+          dataBuilder: (dashboard) => RefreshIndicator(
+            onRefresh: () =>
+                ref.read(electricityControllerProvider.notifier).refresh(),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+              children: [
+                _BalanceHeroCard(dashboard: dashboard),
+                const SizedBox(height: 16),
+                _MetricsGrid(dashboard: dashboard),
+                const SizedBox(height: 16),
+                _PeriodSelector(
+                  selectedPeriod: dashboard.selectedPeriod,
+                  onSelected: (period) => ref
+                      .read(electricityControllerProvider.notifier)
+                      .selectPeriod(period),
+                ),
+                const SizedBox(height: 16),
+                _RechargeTrendCard(dashboard: dashboard),
+                const SizedBox(height: 16),
+                _RechargeRecordsCard(dashboard: dashboard),
+              ],
+            ),
           ),
         ),
       ),

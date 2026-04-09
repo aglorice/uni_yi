@@ -3,15 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../../../app/app_links.dart';
 import '../../../../app/di/app_providers.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/platform/app_installer_service.dart';
 import '../../../../core/platform/file_save_service.dart';
 import '../../../../core/result/result.dart';
 import '../../../../integrations/app_update/github_release_api.dart';
-
-const _gitHubOwner = 'aglorice';
-const _gitHubRepo = 'uni_yi';
 
 class InstalledAppInfo {
   const InstalledAppInfo({
@@ -109,7 +107,7 @@ final appUpdateStatusProvider = FutureProvider.autoDispose<AppUpdateStatus>((
   final installed = await ref.watch(installedAppInfoProvider.future);
   final latestResult = await ref
       .read(gitHubReleaseApiProvider)
-      .fetchLatestRelease(owner: _gitHubOwner, repo: _gitHubRepo);
+      .fetchLatestRelease(owner: appGitHubOwner, repo: appGitHubRepo);
 
   return switch (latestResult) {
     Success<GitHubReleaseInfo>(data: final release) => AppUpdateStatus(

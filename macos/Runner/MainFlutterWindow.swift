@@ -4,9 +4,11 @@ import FlutterMacOS
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
-    let windowFrame = self.frame
     self.contentViewController = flutterViewController
-    self.setFrame(windowFrame, display: true)
+    self.setContentSize(NSSize(width: 1200, height: 860))
+    self.minSize = NSSize(width: 1000, height: 720)
+    self.title = "拾邑 | 五邑大学校园助手"
+    self.center()
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 

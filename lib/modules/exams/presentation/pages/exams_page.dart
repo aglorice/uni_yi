@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../shared/widgets/async_value_view.dart';
+import '../../../../shared/widgets/constrained_body.dart';
 import '../../domain/entities/exam_schedule_snapshot.dart';
 import '../controllers/exams_controller.dart';
 
@@ -20,28 +21,31 @@ class _ExamsPageState extends ConsumerState<ExamsPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('考试安排')),
-      body: AsyncValueView(
-        value: examsAsync,
-        onRetry: () => ref.read(examsControllerProvider.notifier).refresh(),
-        loadingLabel: '考试安排同步中',
-        dataBuilder: (snapshot) => RefreshIndicator(
-          onRefresh: () => ref.read(examsControllerProvider.notifier).refresh(),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-            children: [
-              _ExamsHero(
-                snapshot: snapshot,
-                onSwitchTerm: () => _showTermPicker(snapshot),
-              ),
-              const SizedBox(height: 16),
-              if (snapshot.records.isEmpty)
-                _EmptyExamsState()
-              else
-                for (final record in snapshot.records) ...[
-                  _ExamCard(record: record, onTap: () => _openDetail(record)),
-                  const SizedBox(height: 12),
-                ],
-            ],
+      body: ConstrainedBody(
+        child: AsyncValueView(
+          value: examsAsync,
+          onRetry: () => ref.read(examsControllerProvider.notifier).refresh(),
+          loadingLabel: '考试安排同步中',
+          dataBuilder: (snapshot) => RefreshIndicator(
+            onRefresh: () =>
+                ref.read(examsControllerProvider.notifier).refresh(),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+              children: [
+                _ExamsHero(
+                  snapshot: snapshot,
+                  onSwitchTerm: () => _showTermPicker(snapshot),
+                ),
+                const SizedBox(height: 16),
+                if (snapshot.records.isEmpty)
+                  _EmptyExamsState()
+                else
+                  for (final record in snapshot.records) ...[
+                    _ExamCard(record: record, onTap: () => _openDetail(record)),
+                    const SizedBox(height: 12),
+                  ],
+              ],
+            ),
           ),
         ),
       ),
