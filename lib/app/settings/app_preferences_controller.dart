@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/widgets/pixel_pet.dart';
@@ -21,6 +22,7 @@ class AppPreferencesController extends Notifier<AppPreferences> {
       final random = Random();
       final pet =
           PixelPetType.values[random.nextInt(PixelPetType.values.length)];
+      debugPrint('🎲 Random pet: ${pet.name} (index: ${PixelPetType.values.indexOf(pet)})');
       Future.microtask(() => _update(prefs.copyWith(pixelPet: pet.name)));
       return prefs.copyWith(pixelPet: pet.name);
     }
