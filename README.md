@@ -30,6 +30,10 @@
 **拾邑** (Shí Yì) is a campus assistant app designed for students at Wuyi University (五邑大学). It integrates academic information, campus services, and daily utilities into one cohesive experience.
 
 > 拾取校园点滴，邑你相伴同行。
+>
+> **Current support status**
+> This project currently supports graduate student accounts only.
+> Undergraduate accounts are not supported yet.
 
 ## Features
 
