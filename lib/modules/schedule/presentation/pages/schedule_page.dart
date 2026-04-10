@@ -252,14 +252,13 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       return;
     }
 
-    await ref
+    final success = await ref
         .read(scheduleControllerProvider.notifier)
         .changeTerm(selectedTermId);
     if (!mounted) {
       return;
     }
-    final currentState = ref.read(scheduleControllerProvider);
-    if (currentState is AsyncError) {
+    if (!success) {
       AppSnackBar.show(
         context,
         message: '该学期课表加载失败，已恢复到之前的学期',

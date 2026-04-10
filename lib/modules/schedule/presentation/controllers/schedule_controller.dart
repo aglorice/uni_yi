@@ -19,9 +19,9 @@ class ScheduleController extends AsyncNotifier<ScheduleSnapshot> {
     return _load(forceRefresh: false);
   }
 
-  Future<void> changeTerm(String termId) async {
+  Future<bool> changeTerm(String termId) async {
     if (_selectedTermId == termId && state.value != null) {
-      return;
+      return true;
     }
     final previousTermId = _selectedTermId;
     final previousState = state;
@@ -31,9 +31,10 @@ class ScheduleController extends AsyncNotifier<ScheduleSnapshot> {
     if (newState is AsyncError && previousState is AsyncData<ScheduleSnapshot>) {
       _selectedTermId = previousTermId;
       state = previousState;
-    } else {
-      state = newState;
+      return false;
     }
+    state = newState;
+    return true;
   }
 
   Future<void> refresh() async {

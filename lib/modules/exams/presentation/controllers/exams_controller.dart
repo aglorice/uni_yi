@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/di/app_providers.dart';
 import '../../../../core/error/failure.dart';
+import '../../../../core/models/data_origin.dart';
 import '../../../../core/result/result.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../domain/entities/exam_schedule_snapshot.dart';
+import '../../../schedule/domain/entities/schedule_snapshot.dart';
 
 final examsControllerProvider =
     AsyncNotifierProvider<ExamsController, ExamScheduleSnapshot>(
@@ -23,9 +25,27 @@ class ExamsController extends AsyncNotifier<ExamScheduleSnapshot> {
     if (_selectedTermId == termId && state.value != null) {
       return;
     }
+    final previousSnapshot = state.value;
     _selectedTermId = termId;
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _load(forceRefresh: true));
+    final newState = await AsyncValue.guard(() => _load(forceRefresh: true));
+    if (newState is AsyncError && previousSnapshot != null) {
+      final term = previousSnapshot.availableTerms.firstWhere(
+        (t) => t.id == termId,
+        orElse: () => Term(id: termId, name: termId),
+      );
+      state = AsyncData(
+        ExamScheduleSnapshot(
+          term: term,
+          availableTerms: previousSnapshot.availableTerms,
+          records: [],
+          fetchedAt: DateTime.now(),
+          origin: DataOrigin.remote,
+        ),
+      );
+    } else {
+      state = newState;
+    }
   }
 
   Future<void> refresh() async {
