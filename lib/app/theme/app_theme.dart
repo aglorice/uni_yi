@@ -48,9 +48,12 @@ class AppTheme {
       scaffoldBackgroundColor: scaffoldBackground,
       textTheme: textTheme,
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: scaffoldBackground,
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         centerTitle: true,
         titleTextStyle: textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w700,
