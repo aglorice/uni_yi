@@ -50,30 +50,10 @@ class HomePage extends ConsumerWidget {
                   petType: petType,
                 ),
                 const SizedBox(height: 18),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 11,
-                      child: _TodayCourseCard(scheduleAsync: scheduleAsync),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      flex: 9,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _ElectricityPreviewCard(
-                            electricityAsync: electricityAsync,
-                          ),
-                          const SizedBox(height: 14),
-                          _GymAppointmentsPreviewCard(
-                            appointmentsAsync: appointmentsAsync,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                _DesktopOverviewGrid(
+                  scheduleAsync: scheduleAsync,
+                  electricityAsync: electricityAsync,
+                  appointmentsAsync: appointmentsAsync,
                 ),
                 const SizedBox(height: 24),
                 const _HomeQuickActionsSection(),
@@ -122,6 +102,51 @@ class HomePage extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 112),
             children: children,
           ),
+        );
+      },
+    );
+  }
+}
+
+class _DesktopOverviewGrid extends StatelessWidget {
+  const _DesktopOverviewGrid({
+    required this.scheduleAsync,
+    required this.electricityAsync,
+    required this.appointmentsAsync,
+  });
+
+  final AsyncValue<ScheduleSnapshot> scheduleAsync;
+  final AsyncValue<ElectricityDashboard> electricityAsync;
+  final AsyncValue<List<BookingRecord>> appointmentsAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 14.0;
+        final columnWidth = (constraints.maxWidth - spacing) / 2;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            SizedBox(
+              width: columnWidth,
+              child: _TodayCourseCard(scheduleAsync: scheduleAsync),
+            ),
+            SizedBox(
+              width: columnWidth,
+              child: _ElectricityPreviewCard(
+                electricityAsync: electricityAsync,
+              ),
+            ),
+            SizedBox(
+              width: columnWidth,
+              child: _GymAppointmentsPreviewCard(
+                appointmentsAsync: appointmentsAsync,
+              ),
+            ),
+          ],
         );
       },
     );
