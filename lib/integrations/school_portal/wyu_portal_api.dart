@@ -216,6 +216,16 @@ class WyuPortalApi {
     required ServiceItem item,
   }) async {
     final state = _stateForSession(session);
+    if (_isYjsServiceItem(item)) {
+      final yjsLaunch = await _prepareYjsServiceLaunch(
+        session: session,
+        state: state,
+      );
+      if (yjsLaunch != null) {
+        return yjsLaunch;
+      }
+    }
+
     final candidates = item.launchCandidates;
     if (candidates.isEmpty) {
       return const FailureResult(BusinessFailure('该服务暂无可用入口。'));
@@ -229,11 +239,15 @@ class WyuPortalApi {
         serviceUrl: normalized,
       );
       if (launch case Success<String>(data: final resolvedUrl)) {
+        final resolvedUri = Uri.parse(resolvedUrl);
         return Success(
           ServiceLaunchData(
             initialUrl: normalized,
             resolvedUrl: resolvedUrl,
-            cookies: state.cookieStore.snapshot(),
+            cookies: _cookiesForLaunchUri(
+              state.cookieStore.snapshot(),
+              resolvedUri,
+            ),
           ),
         );
       }
@@ -242,6 +256,32 @@ class WyuPortalApi {
 
     return FailureResult(
       lastFailure ?? const BusinessFailure('该服务当前无法完成单点登录。'),
+    );
+  }
+
+  Future<Result<ServiceLaunchData>?> _prepareYjsServiceLaunch({
+    required AppSession session,
+    required _RuntimeState state,
+  }) async {
+    final sidResult = await _initYjsSession(session.userId, state.cookieStore);
+    if (sidResult case FailureResult<String>(failure: final failure)) {
+      return FailureResult(failure);
+    }
+
+    final sessionId = sidResult.requireValue();
+    final resolvedUri = Uri.parse(
+      'https://yjsc.wyu.edu.cn/(S($sessionId))/student/default/index',
+    );
+    _logger.info('[YJS] 使用专用入口打开研究生系统 uri=$resolvedUri');
+    return Success(
+      ServiceLaunchData(
+        initialUrl: resolvedUri.toString(),
+        resolvedUrl: resolvedUri.toString(),
+        cookies: _cookiesForLaunchUri(
+          state.cookieStore.snapshot(),
+          resolvedUri,
+        ),
+      ),
     );
   }
 
@@ -1528,6 +1568,28 @@ class WyuPortalApi {
   String? _extractYjsSessionId(String input) {
     final match = RegExp(r'\(S\(([^)]+)\)\)').firstMatch(input);
     return match?.group(1);
+  }
+
+  bool _isYjsServiceItem(ServiceItem item) {
+    if ((item.wid?.trim().isNotEmpty ?? false) &&
+        item.wid!.trim() == _defaultYjsServiceWid) {
+      return true;
+    }
+
+    if (item.appName.contains('研究生')) {
+      return true;
+    }
+
+    return item.launchCandidates.any((candidate) {
+      return candidate.contains('yjsc.wyu.edu.cn');
+    });
+  }
+
+  List<PortalCookie> _cookiesForLaunchUri(
+    Iterable<PortalCookie> cookies,
+    Uri uri,
+  ) {
+    return cookies.where((cookie) => cookie.matches(uri)).toList();
   }
 
   bool _looksLikeHtml(String body) {
