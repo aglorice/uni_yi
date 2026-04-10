@@ -34,7 +34,6 @@ class _ExamsPageState extends ConsumerState<ExamsPage> {
               children: [
                 _ExamsHero(
                   snapshot: snapshot,
-                  onSwitchTerm: () => _showTermPicker(snapshot),
                 ),
                 const SizedBox(height: 16),
                 if (snapshot.records.isEmpty)
@@ -52,102 +51,6 @@ class _ExamsPageState extends ConsumerState<ExamsPage> {
     );
   }
 
-  Future<void> _showTermPicker(ExamScheduleSnapshot snapshot) async {
-    final selectedTermId = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '切换学期',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '从学期列表中选择要查看的考试安排。',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF607172),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: snapshot.availableTerms.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final term = snapshot.availableTerms[index];
-                      final isSelected = term.id == snapshot.term.id;
-                      return Material(
-                        color: isSelected
-                            ? Theme.of(context).colorScheme.primaryContainer
-                            : Theme.of(context).colorScheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(20),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () => Navigator.of(context).pop(term.id),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    term.name,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          fontWeight: isSelected
-                                              ? FontWeight.w700
-                                              : FontWeight.w600,
-                                        ),
-                                  ),
-                                ),
-                                if (isSelected)
-                                  Icon(
-                                    Icons.check_circle,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                  )
-                                else
-                                  const Icon(Icons.chevron_right_rounded),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    if (!mounted ||
-        selectedTermId == null ||
-        selectedTermId == snapshot.term.id) {
-      return;
-    }
-
-    await ref.read(examsControllerProvider.notifier).changeTerm(selectedTermId);
-  }
-
   Future<void> _openDetail(ExamRecord record) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -159,10 +62,9 @@ class _ExamsPageState extends ConsumerState<ExamsPage> {
 }
 
 class _ExamsHero extends StatelessWidget {
-  const _ExamsHero({required this.snapshot, required this.onSwitchTerm});
+  const _ExamsHero({required this.snapshot});
 
   final ExamScheduleSnapshot snapshot;
-  final VoidCallback onSwitchTerm;
 
   @override
   Widget build(BuildContext context) {
@@ -191,62 +93,29 @@ class _ExamsHero extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        snapshot.term.name,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                            ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        '共 ${snapshot.records.length} 条考试记录',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '最近同步 $syncLabel',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.76),
-                        ),
-                      ),
-                    ],
+                Text(
+                  snapshot.term.name,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-                FilledButton.tonalIcon(
-                  onPressed: onSwitchTerm,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.15),
-                    foregroundColor: Colors.white,
+                const SizedBox(height: 10),
+                Text(
+                  '共 ${snapshot.records.length} 条考试记录',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
-                  icon: const Icon(Icons.swap_horiz_rounded),
-                  label: const Text('切换学期'),
                 ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _HeroPill(
-                  icon: Icons.assignment_outlined,
-                  label: '${snapshot.records.length} 场考试',
-                ),
-                _HeroPill(
-                  icon: Icons.school_outlined,
-                  label: '${snapshot.availableTerms.length} 个可选学期',
+                const SizedBox(height: 4),
+                Text(
+                  '最近同步 $syncLabel',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.76),
+                  ),
                 ),
               ],
             ),
@@ -600,7 +469,7 @@ class _EmptyExamsState extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '当前学期没有查询到考试安排，可以切换学期查看。',
+            '当前没有查询到考试安排。',
             textAlign: TextAlign.center,
             style: Theme.of(
               context,
