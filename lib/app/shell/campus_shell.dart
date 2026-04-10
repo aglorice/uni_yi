@@ -187,67 +187,61 @@ class _DesktopRailHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      child: expanded
-          ? Padding(
-              key: const ValueKey('expanded'),
-              padding: const EdgeInsets.fromLTRB(14, 16, 12, 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(
-                      Icons.school_rounded,
-                      color: colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      '拾邑',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _RailToggleButton(expanded: true, onPressed: onToggle),
-                ],
+    if (expanded) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(14, 16, 12, 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(14),
               ),
-            )
-          : Padding(
-              key: const ValueKey('collapsed'),
-              padding: const EdgeInsets.fromLTRB(8, 16, 8, 12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(
-                      Icons.school_rounded,
-                      color: colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _RailToggleButton(expanded: false, onPressed: onToggle),
-                ],
+              child: Icon(
+                Icons.school_rounded,
+                color: colorScheme.onPrimaryContainer,
               ),
             ),
+            const SizedBox(width: 12),
+            Text(
+              '拾邑',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 8),
+            _RailToggleButton(expanded: true, onPressed: onToggle),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 16, 8, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              Icons.school_rounded,
+              color: colorScheme.onPrimaryContainer,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _RailToggleButton(expanded: false, onPressed: onToggle),
+        ],
+      ),
     );
   }
 }
