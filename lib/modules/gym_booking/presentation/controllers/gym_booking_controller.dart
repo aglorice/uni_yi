@@ -148,9 +148,23 @@ class MyGymAppointmentsNotifier extends AsyncNotifier<List<BookingRecord>> {
     );
 
     return switch (result) {
-      Success<GymAppointmentPage>(data: final page) => page.records,
+      Success<GymAppointmentPage>(data: final page) =>
+        _deduplicateAndSort(page.records),
       _ => const [],
     };
+  }
+
+  /// 按 id 去重，再按日期降序排列（最新的排前面）。
+  List<BookingRecord> _deduplicateAndSort(List<BookingRecord> records) {
+    final seen = <String>{};
+    final unique = <BookingRecord>[];
+    for (final record in records) {
+      if (seen.add(record.id)) {
+        unique.add(record);
+      }
+    }
+    unique.sort((a, b) => b.date.compareTo(a.date));
+    return unique;
   }
 }
 

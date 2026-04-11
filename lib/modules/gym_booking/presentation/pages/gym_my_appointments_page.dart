@@ -9,6 +9,7 @@ import '../../../../shared/widgets/constrained_body.dart';
 import '../../../../shared/widgets/surface_card.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../domain/entities/gym_appointment_page.dart';
+import '../../domain/entities/gym_booking_overview.dart';
 import '../widgets/gym_booking_components.dart';
 
 class GymMyAppointmentsPage extends ConsumerStatefulWidget {
@@ -50,6 +51,8 @@ class _GymMyAppointmentsPageState extends ConsumerState<GymMyAppointmentsPage> {
   }
 
   Future<void> _fetch({required bool reset}) async {
+    if (_loading || _loadingMore) return;
+
     setState(() {
       if (reset) {
         _loading = true;
@@ -89,17 +92,10 @@ class _GymMyAppointmentsPageState extends ConsumerState<GymMyAppointmentsPage> {
     switch (result) {
       case Success<GymAppointmentPage>(data: final data):
         setState(() {
-          if (reset || _page == null) {
-            _page = data;
-          } else {
-            _page = _page!.copyWith(
-              query: data.query,
-              records: [..._page!.records, ...data.records],
-              totalSize: data.totalSize,
-              fetchedAt: data.fetchedAt,
-              origin: data.origin,
-            );
-          }
+          final merged = reset || _page == null
+              ? data.records
+              : [..._page!.records, ...data.records];
+          _page = data.copyWith(records: _deduplicateAndSort(merged));
           _loading = false;
           _loadingMore = false;
         });
@@ -110,6 +106,19 @@ class _GymMyAppointmentsPageState extends ConsumerState<GymMyAppointmentsPage> {
           _error = failure;
         });
     }
+  }
+
+  /// 按 id 去重，再按日期降序排列（最新的排前面）。
+  List<BookingRecord> _deduplicateAndSort(List<BookingRecord> records) {
+    final seen = <String>{};
+    final unique = <BookingRecord>[];
+    for (final record in records) {
+      if (seen.add(record.id)) {
+        unique.add(record);
+      }
+    }
+    unique.sort((a, b) => b.date.compareTo(a.date));
+    return unique;
   }
 
   @override
