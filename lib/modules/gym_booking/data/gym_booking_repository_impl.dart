@@ -39,6 +39,10 @@ class GymBookingRepositoryImpl implements GymBookingRepository {
     required DateTime date,
     bool forceRefresh = false,
   }) async {
+    if (forceRefresh) {
+      await _cacheStore.remove(_cacheKey(date));
+    }
+
     final remote = await _gateway.fetchGymBookingOverview(session, date: date);
 
     if (remote case Success<GymBookingOverview>(data: final overview)) {

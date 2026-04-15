@@ -47,7 +47,13 @@ class GymBookingPage extends ConsumerWidget {
           loadingLabel: '同步体育场预约信息',
           dataBuilder: (overview) {
             return RefreshIndicator(
-              onRefresh: controller.refresh,
+              onRefresh: () async {
+                // Clear recommendation cache so it re-fetches on re-mount
+                await ref.read(jsonCacheStoreProvider).remove(
+                  _gymRecommendationCacheKey(selectedDate, preferences),
+                );
+                await controller.refresh();
+              },
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
                 children: [
@@ -317,6 +323,17 @@ class _ActionCard extends StatelessWidget {
   }
 }
 
+String _gymRecommendationCacheKey(DateTime date, AppPreferences preferences) {
+  final normalized = DateTime(date.year, date.month, date.day);
+  final dateKey = DateFormat('yyyyMMdd').format(normalized);
+  final signature = [
+    preferences.gymPreferredSportId ?? 'all-sport',
+    preferences.gymPreferredVenueTypeId ?? 'all-venue',
+    preferences.gymTimePreference?.name ?? 'all-time',
+  ].join('_');
+  return 'gym.recommendations.$dateKey.$signature';
+}
+
 class _RecommendationSection extends ConsumerStatefulWidget {
   const _RecommendationSection({
     required this.selectedDate,
@@ -369,16 +386,36 @@ class _RecommendationSectionState
       return;
     }
 
-    setState(() {
-      _snapshot = cached == null
-          ? GymRecommendationSnapshot(
-              date: _normalizeDate(widget.selectedDate),
-              items: const [],
-              preferenceSummary: _preferenceSummary(widget.preferences),
-            )
-          : GymRecommendationSnapshot.fromJson(cached);
-      _loadingCache = false;
-    });
+    if (cached == null) {
+      setState(() {
+        _snapshot = GymRecommendationSnapshot(
+          date: _normalizeDate(widget.selectedDate),
+          items: const [],
+          preferenceSummary: _preferenceSummary(widget.preferences),
+        );
+        _loadingCache = false;
+      });
+      // Auto-trigger refresh when cache was cleared (e.g. pull-to-refresh)
+      _autoRefreshIfNeeded();
+    } else {
+      setState(() {
+        _snapshot = GymRecommendationSnapshot.fromJson(cached);
+        _loadingCache = false;
+      });
+    }
+  }
+
+  void _autoRefreshIfNeeded() {
+    final p = widget.preferences;
+    if ((p.gymPhoneNumber ?? '').trim().isEmpty) {
+      return;
+    }
+    if (p.gymPreferredSportId == null &&
+        p.gymPreferredVenueTypeId == null &&
+        p.gymTimePreference == null) {
+      return;
+    }
+    _refreshRecommendations();
   }
 
   Future<void> _refreshRecommendations() async {
@@ -504,7 +541,12 @@ class _RecommendationSectionState
         }
       }
 
-      if (!page.hasMore) {
+      // Continue if there might be more data.
+      // Use hasMore from totalSize, and also check if the page was full as a
+      // fallback when the API does not return totalSize.
+      final hasMorePages =
+          page.hasMore || page.venues.length >= query.pageSize;
+      if (!hasMorePages || page.venues.isEmpty) {
         break;
       }
       pageNumber += 1;
@@ -710,14 +752,7 @@ class _RecommendationSectionState
   }
 
   String _cacheKey(DateTime date, AppPreferences preferences) {
-    final normalized = _normalizeDate(date);
-    final dateKey = DateFormat('yyyyMMdd').format(normalized);
-    final signature = [
-      preferences.gymPreferredSportId ?? 'all-sport',
-      preferences.gymPreferredVenueTypeId ?? 'all-venue',
-      preferences.gymTimePreference?.name ?? 'all-time',
-    ].join('_');
-    return 'gym.recommendations.$dateKey.$signature';
+    return _gymRecommendationCacheKey(date, preferences);
   }
 
   String _preferenceSummary(AppPreferences preferences) {
